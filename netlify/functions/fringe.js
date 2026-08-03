@@ -60,7 +60,7 @@ exports.handler = async (event) => {
     const body = await res.text();
     return {
       statusCode: res.status,
-      headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=86400' },
+      headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600', 'Netlify-CDN-Cache-Control': 'public, s-maxage=21600, stale-while-revalidate=86400' },
       body
     };
   } catch (e) {
