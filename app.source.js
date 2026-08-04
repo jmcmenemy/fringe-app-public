@@ -1,0 +1,7653 @@
+const {
+  useState,
+  useEffect,
+  useMemo,
+  useRef
+} = React, CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSdAFEpJDVvI1L_f5GgtZjscx7IyDlbDma2nwlFqZt-UdbeoXNwDOOijfZtV6jmeDmKkpD6BDD3fZ1y/pub?gid=1511245025&single=true&output=csv", DATA_SOURCE = "api", APP_DATA_VERSION = 1, PROXY_URL = "/.netlify/functions/fringe", SITE_YEAR = new Date().getFullYear(), PLAN_KEY = "fringe-public-plan-v1", NOTES_KEY = "fringe-public-notes-v1", HELP_URL = "https://docs.google.com/spreadsheets/d/15aHnYGBL73-n6MOf2Su1hlEG7FxReUjEyc90_AZugB0/gviz/tq?tqx=out:csv&sheet=" + encodeURIComponent("Help - Public"), C = {
+  bg: "var(--bg)",
+  card: "var(--card)",
+  border: "var(--border)",
+  txt: "var(--txt)",
+  txt2: "var(--txt2)",
+  txt3: "var(--txt3)",
+  accent: "var(--accent)",
+  pink: "var(--pink)"
+}, GENRE_COLOR = {
+  Theatre: "#f472b6",
+  Comedy: "#ffba08",
+  "Cabaret and Variety": "#a855f7",
+  Music: "#22c55e",
+  "Musicals and Opera": "#f97316",
+  "Dance, Physical Theatre and Circus": "#3b82f6",
+  "Children's Shows": "#14b8a6",
+  "Spoken Word": "#eab308",
+  Exhibitions: "#94a3b8",
+  Events: "#64748b"
+};
+var THEME = "dark";
+const gcolor = t => THEME === "nocolor" ? "#7c789a" : GENRE_COLOR[t] || "#64748b";
+
+function poundsOf(t) {
+  if (t == null) return NaN;
+  const n = String(t).replace(/[^0-9.]/g, "");
+  return n === "" ? NaN : parseFloat(n)
+}
+
+function priceLabel(t) {
+  const n = poundsOf(t);
+  return isNaN(n) ? "" : n === 0 ? "Free" : "\xA3" + (Number.isInteger(n) ? n : n.toFixed(2))
+}
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function fmtDate(t) {
+  if (!t) return "";
+  const n = new Date(t + "T12:00:00");
+  return isNaN(n.getTime()) ? t : n.getDate() + " " + MONTHS[n.getMonth()]
+}
+
+function dateRange(t, n) {
+  return !t && !n ? "" : t === n || !n ? fmtDate(t) : fmtDate(t) + " \u2013 " + fmtDate(n)
+}
+
+function mapFilterCalOK(t, n) {
+  return n === "all" || n === t
+}
+
+function ageNum(t) {
+  const n = String(t || "").match(/\d+/);
+  return n ? parseInt(n[0]) : -1
+}
+
+function loadLeaflet() {
+  return window.L ? Promise.resolve(window.L) : (window._llp || (window._llp = new Promise((t, n) => {
+    const o = document.createElement("link");
+    o.rel = "stylesheet", o.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css", document.head.appendChild(o);
+    const a = document.createElement("script");
+    a.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js", a.onload = () => t(window.L), a.onerror = n, document.head.appendChild(a)
+  })), window._llp)
+}
+
+function parseRows(t) {
+  const n = [];
+  return t.forEach(o => {
+    const a = (o.Code || "").trim(),
+      s = (o.Title || "").trim();
+    !a || !s || n.push({
+      code: a,
+      title: s,
+      subtitle: (o.Subtitle || "").trim(),
+      teaser: (o.Teaser || "").trim(),
+      description: (o.Description || "").trim(),
+      genre: (o.Genre || "").trim(),
+      tags: (o["Genre tags"] || "").split(",").map(d => d.trim()).filter(Boolean),
+      warnings: (o.Warnings || "").trim(),
+      age: (o["Age category"] || "").trim(),
+      artist: (o.Artist || "").trim(),
+      artistType: (o["Artist type"] || "").trim(),
+      country: (o.Country || "").trim(),
+      venue: (o.Venue || "").trim(),
+      venueCode: (o["Venue code"] || "").trim(),
+      venueAddr: (o["Venue address"] || "").trim(),
+      venuePostcode: (o["Venue postcode"] || "").trim(),
+      access: (o["Venue accessibility"] || "").trim(),
+      startStr: (o["Start time"] || o["Start Time"] || "").trim(),
+      endStr: (o["End Time"] || o["End time"] || "").trim(),
+      duration: parseInt(o.Duration) || 0,
+      lat: parseFloat(String(o.Latitude || "").replace(/[^0-9.\-]/g, "")),
+      lng: parseFloat(String(o.Longitude || "").replace(/[^0-9.\-]/g, "")),
+      perfs: (o["Performances #"] || "").trim(),
+      performers: (o["Performers #"] || "").trim(),
+      priceFull: o["Lowest full price"],
+      priceConc: o["Lowest concession price"],
+      first: (o["First performance date"] || "").trim(),
+      last: (o["Last performance date"] || "").trim(),
+      website: (o.Website || "").trim()
+    })
+  }), n
+}
+
+function parseApiEvent(t) {
+  if (!t || typeof t.title != "string" || !t.title || !t.code) return null;
+  var n = t.venue || {},
+    o = n.position || {},
+    a = (t.performances || []).map(function(f) {
+      var R = String(f.start || ""),
+        E = String(f.end || "");
+      return {
+        date: R.slice(0, 10),
+        start: R.slice(11, 16),
+        end: E ? E.slice(11, 16) : "",
+        duration: f.duration_minutes || 0,
+        price: f.price == null ? null : Number(f.price),
+        conc: f.concession == null ? null : Number(f.concession),
+        onSale: f.on_sale === !0,
+        pct: typeof f.percent_remaining == "number" ? f.percent_remaining : null,
+        exhausted: f.allocation_exhausted === !0,
+        availKnown: f.on_sale != null || f.allocation_exhausted != null || f.percent_remaining != null
+      }
+    }).filter(function(f) {
+      return f.date
+    }),
+    s = a.map(function(f) {
+      return f.date
+    }).filter(Boolean).sort(),
+    d = a.map(function(f) {
+      return f.price
+    }).filter(function(f) {
+      return f != null && !isNaN(f)
+    }),
+    w = a.map(function(f) {
+      return f.conc
+    }).filter(function(f) {
+      return f != null && !isNaN(f)
+    }),
+    p = [];
+  a.forEach(function(f) {
+    f.start && p.indexOf(f.start) < 0 && p.push(f.start)
+  });
+  var h = a[0] || {},
+    b = a.some(function(f) {
+      return f.availKnown
+    }),
+    y = null;
+  if (b) {
+    var g = a.filter(function(f) {
+      return f.onSale
+    });
+    if (g.length === 0) y = "soldout";
+    else {
+      var S = g.map(function(f) {
+          return f.pct
+        }).filter(function(f) {
+          return typeof f == "number"
+        }),
+        I = S.length ? Math.max.apply(null, S) : null;
+      y = I != null && I > 0 && I < 30 ? "low" : "good"
+    }
+  }
+  return {
+    code: t.code,
+    title: t.title,
+    subtitle: t.sub_title || "",
+    teaser: t.teaser || "",
+    description: t.description || "",
+    genre: t.genre || "",
+    tags: String(t.genre_tags || "").split(",").map(function(f) {
+      return f.trim()
+    }).filter(Boolean),
+    warnings: t.warnings || "",
+    age: t.age_category || "",
+    artist: t.artist || "",
+    artistType: t.artist_type || "",
+    country: t.country || "",
+    venue: n.name || "",
+    venueCode: n.code || "",
+    venueAddr: n.address || "",
+    venuePostcode: n.post_code || "",
+    access: n.disabled_description || "",
+    lat: o.lat != null ? parseFloat(o.lat) : NaN,
+    lng: o.lon != null ? parseFloat(o.lon) : NaN,
+    website: t.website || "",
+    availability: y,
+    perfs: String(a.length),
+    performers: String(t.performers_number || ""),
+    performances: a,
+    startStr: p.length === 1 ? p[0] : p.length > 1 ? "Various times" : "",
+    endStr: p.length === 1 ? h.end : "",
+    duration: h.duration || 0,
+    priceFull: d.length ? Math.min.apply(null, d) : null,
+    priceConc: w.length ? Math.min.apply(null, w) : null,
+    first: s[0] || "",
+    last: s[s.length - 1] || ""
+  }
+}
+
+function loadAllFromApi(t) {
+  var n = [],
+    o = 0,
+    a = 100;
+
+  function s() {
+    return fetch(PROXY_URL + "?endpoint=events&size=" + a + "&from=" + o).then(function(d) {
+      if (!d.ok) throw new Error("proxy HTTP " + d.status);
+      return d.json()
+    }).then(function(d) {
+      if (!Array.isArray(d)) throw new Error("unexpected proxy response");
+      return n = n.concat(d), t && t(n.length), d.length < a || o > 2e4 ? n : (o += a, s())
+    })
+  }
+  return s()
+}
+
+function RowsIcon() {
+  return React.createElement("svg", {
+    "aria-hidden": "true",
+    width: "15",
+    height: "15",
+    viewBox: "0 0 24 24",
+    fill: "currentColor"
+  }, React.createElement("rect", {
+    x: "3",
+    y: "4",
+    width: "18",
+    height: "4",
+    rx: "1"
+  }), React.createElement("rect", {
+    x: "3",
+    y: "10",
+    width: "18",
+    height: "4",
+    rx: "1"
+  }), React.createElement("rect", {
+    x: "3",
+    y: "16",
+    width: "18",
+    height: "4",
+    rx: "1"
+  }))
+}
+
+function ColsIcon() {
+  return React.createElement("svg", {
+    "aria-hidden": "true",
+    width: "15",
+    height: "15",
+    viewBox: "0 0 24 24",
+    fill: "currentColor"
+  }, React.createElement("rect", {
+    x: "4",
+    y: "3",
+    width: "4",
+    height: "18",
+    rx: "1"
+  }), React.createElement("rect", {
+    x: "10",
+    y: "3",
+    width: "4",
+    height: "18",
+    rx: "1"
+  }), React.createElement("rect", {
+    x: "16",
+    y: "3",
+    width: "4",
+    height: "18",
+    rx: "1"
+  }))
+}
+
+function ShareLinkIcon() {
+  return React.createElement("svg", {
+    "aria-hidden": "true",
+    width: "14",
+    height: "14",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2.2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, React.createElement("path", {
+    d: "M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"
+  }), React.createElement("path", {
+    d: "M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"
+  }))
+}
+
+function ShareThisIcon() {
+  return React.createElement("svg", {
+    "aria-hidden": "true",
+    width: "14",
+    height: "14",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2.2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, React.createElement("circle", {
+    cx: "18",
+    cy: "5",
+    r: "2.5"
+  }), React.createElement("circle", {
+    cx: "6",
+    cy: "12",
+    r: "2.5"
+  }), React.createElement("circle", {
+    cx: "18",
+    cy: "19",
+    r: "2.5"
+  }), React.createElement("path", {
+    d: "M8.2 13.3l7.6 4.4M15.8 6.3l-7.6 4.4"
+  }))
+}
+
+function ChevronIcon({
+  open: t
+}) {
+  return React.createElement("svg", {
+    "aria-hidden": "true",
+    width: "16",
+    height: "16",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2.6",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    style: {
+      transform: t ? "none" : "rotate(-90deg)",
+      transition: "transform 0.15s"
+    }
+  }, React.createElement("path", {
+    d: "M6 9l6 6 6-6"
+  }))
+}
+
+function ScheduleIcon() {
+  return React.createElement("svg", {
+    "aria-hidden": "true",
+    width: "14",
+    height: "14",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, React.createElement("rect", {
+    x: "3",
+    y: "4.5",
+    width: "18",
+    height: "16",
+    rx: "2"
+  }), React.createElement("path", {
+    d: "M3 9h18M8 2.5v4M16 2.5v4"
+  }), React.createElement("path", {
+    d: "M12 12.5v5M9.5 15h5"
+  }))
+}
+
+function ThemeToggleCollapsible({
+  theme: t,
+  set: n
+}) {
+  var o = useState(!1),
+    a = o[0],
+    s = o[1],
+    d = {
+      dark: "\u{1F319}",
+      light: "\u2600\uFE0F",
+      nocolor: "\u25D1"
+    } [t] || "\u{1F319}",
+    w = function(p, h, b) {
+      return React.createElement("button", {
+        key: p,
+        title: b,
+        onClick: function() {
+          n(p), s(!1)
+        },
+        style: {
+          padding: "5px 9px",
+          border: "none",
+          cursor: "pointer",
+          fontSize: 14,
+          lineHeight: 1,
+          background: t === p ? C.accent : "transparent",
+          color: t === p ? "#fff" : C.txt2
+        }
+      }, h)
+    };
+  return a ? React.createElement("div", {
+    style: {
+      display: "inline-flex",
+      borderRadius: 8,
+      border: "1px solid " + C.border,
+      overflow: "hidden",
+      flexShrink: 0
+    }
+  }, w("dark", "\u{1F319}", "Dark"), w("light", "\u2600\uFE0F", "Light"), w("nocolor", "\u25D1", "No colour")) : React.createElement("button", {
+    onClick: function() {
+      s(!0)
+    },
+    "aria-label": "Change colour theme",
+    title: "Theme",
+    style: {
+      width: 40,
+      height: 36,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 8,
+      border: "1px solid " + C.border,
+      background: "transparent",
+      color: C.txt2,
+      fontSize: 15,
+      cursor: "pointer",
+      flexShrink: 0
+    }
+  }, d)
+}
+
+function LayoutToggle({
+  layout: t,
+  set: n
+}) {
+  return React.createElement("div", {
+    style: {
+      display: "inline-flex",
+      borderRadius: 8,
+      border: "1px solid " + C.border,
+      overflow: "hidden",
+      flexShrink: 0
+    }
+  }, React.createElement("button", {
+    title: "Stack",
+    onClick: () => n("vertical"),
+    style: {
+      padding: "5px 8px",
+      border: "none",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      background: t === "vertical" ? C.accent : "transparent",
+      color: t === "vertical" ? "#fff" : C.txt2
+    }
+  }, React.createElement(RowsIcon, null)), React.createElement("button", {
+    title: "Side by side",
+    onClick: () => n("horizontal"),
+    style: {
+      padding: "5px 8px",
+      border: "none",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      background: t === "horizontal" ? C.accent : "transparent",
+      color: t === "horizontal" ? "#fff" : C.txt2
+    }
+  }, React.createElement(ColsIcon, null)))
+}
+
+function ThemeToggle({
+  theme: t,
+  set: n
+}) {
+  var o = function(a, s, d) {
+    return React.createElement("button", {
+      key: a,
+      title: d,
+      onClick: function() {
+        n(a)
+      },
+      style: {
+        padding: "5px 9px",
+        border: "none",
+        cursor: "pointer",
+        fontSize: 14,
+        lineHeight: 1,
+        background: t === a ? C.accent : "transparent",
+        color: t === a ? "#fff" : C.txt2
+      }
+    }, s)
+  };
+  return React.createElement("div", {
+    style: {
+      display: "inline-flex",
+      borderRadius: 8,
+      border: "1px solid " + C.border,
+      overflow: "hidden",
+      flexShrink: 0
+    }
+  }, o("dark", "\u{1F319}", "Dark"), o("light", "\u2600\uFE0F", "Light"), o("nocolor", "\u25D1", "No colour"))
+}
+
+function PropRow({
+  s: t,
+  onOpen: n,
+  onRemove: o
+}) {
+  return React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      padding: "9px 11px",
+      borderRadius: 10,
+      background: "#17142b",
+      border: "1px solid " + C.border
+    }
+  }, React.createElement("div", {
+    onClick: n,
+    style: {
+      flex: 1,
+      minWidth: 0,
+      cursor: "pointer"
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 14,
+      fontWeight: 700,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, t.title), React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.txt2,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, t.venue, " \xB7 ", priceLabel(t.priceFull) || "\u2014"), (t.startStr || t.duration) && React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.txt3,
+      marginTop: 1
+    }
+  }, t.startStr || "", t.endStr ? "\u2013" + t.endStr : "", t.duration ? " \xB7 " + t.duration + " min" : "")), o && React.createElement("button", {
+    onClick: o,
+    style: {
+      background: "none",
+      border: "none",
+      color: C.txt3,
+      fontSize: 16,
+      cursor: "pointer",
+      flexShrink: 0
+    }
+  }, "\u2715"))
+}
+
+function LinkIcon() {
+  return React.createElement("svg", {
+    "aria-hidden": "true",
+    width: "13",
+    height: "13",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2.2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, React.createElement("path", {
+    d: "M14 4h6v6"
+  }), React.createElement("path", {
+    d: "M20 4l-9 9"
+  }), React.createElement("path", {
+    d: "M17 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h6"
+  }))
+}
+
+function HelpIcon() {
+  return React.createElement("svg", {
+    "aria-hidden": "true",
+    width: "17",
+    height: "17",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2.2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, React.createElement("circle", {
+    cx: "12",
+    cy: "12",
+    r: "9"
+  }), React.createElement("path", {
+    d: "M9.3 9a2.7 2.7 0 0 1 5.2 1c0 1.9-2.5 2.2-2.5 3.4"
+  }), React.createElement("circle", {
+    cx: "12",
+    cy: "17",
+    r: "0.6",
+    fill: "currentColor"
+  }))
+}
+
+function HelpModal({
+  rows: t,
+  onClose: n
+}) {
+  return React.createElement("div", {
+    onClick: n,
+    onKeyDown: function(o) {
+      o.key === "Escape" && n()
+    },
+    tabIndex: -1,
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.65)",
+      zIndex: 1100,
+      display: "flex",
+      alignItems: "flex-start",
+      justifyContent: "center",
+      overflowY: "auto",
+      padding: "30px 12px"
+    }
+  }, React.createElement("div", {
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "Help and about",
+    onClick: o => o.stopPropagation(),
+    style: {
+      background: C.card,
+      border: "1px solid " + C.border,
+      borderRadius: 16,
+      maxWidth: 600,
+      width: "100%",
+      padding: "22px 22px 26px",
+      position: "relative"
+    }
+  }, React.createElement("button", {
+    onClick: n,
+    "aria-label": "Close",
+    style: {
+      position: "absolute",
+      top: 12,
+      right: 12,
+      background: "none",
+      border: "none",
+      color: C.txt2,
+      fontSize: 22,
+      cursor: "pointer"
+    }
+  }, "\u2715"), React.createElement("div", {
+    style: {
+      fontSize: 20,
+      fontWeight: 900,
+      marginBottom: 14
+    }
+  }, "Help"), t === "loading" && React.createElement("div", {
+    style: {
+      color: C.txt2,
+      fontSize: 14
+    }
+  }, "Loading\u2026"), t === "error" && React.createElement("div", {
+    style: {
+      color: "#fca5a5",
+      fontSize: 14
+    }
+  }, "Couldn't load help right now \u2014 make sure the \u201CHelp - Public\u201D sheet exists and the spreadsheet is shared as \u201CAnyone with the link can view\u201D."), Array.isArray(t) && t.length === 0 && React.createElement("div", {
+    style: {
+      color: C.txt3,
+      fontSize: 14
+    }
+  }, "No help content yet."), Array.isArray(t) && t.map((o, a) => {
+    const s = (o[0] || "").trim(),
+      d = (o.length > 1 ? o.slice(1).filter(Boolean).join("  ") : "").trim();
+    return !s && !d ? null : s && d ? React.createElement("div", {
+      key: a,
+      style: {
+        marginBottom: 14
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 15,
+        fontWeight: 800,
+        color: C.txt,
+        marginBottom: 3
+      }
+    }, s), React.createElement("div", {
+      style: {
+        fontSize: 14,
+        color: C.txt2,
+        lineHeight: 1.55,
+        whiteSpace: "pre-wrap"
+      }
+    }, d)) : React.createElement("div", {
+      key: a,
+      style: {
+        fontSize: 14,
+        color: C.txt2,
+        lineHeight: 1.55,
+        marginBottom: 10,
+        whiteSpace: "pre-wrap"
+      }
+    }, s || d)
+  })))
+}
+var ORG_COLORS = {
+  Assembly: "#FF4D6A",
+  Pleasance: "#FFBA08",
+  "Gilded Balloon": "#FF6FB7",
+  Underbelly: "#A855F7",
+  "The Stand": "#3B82F6",
+  "Just The Tonic": "#F97316",
+  "Monkey Barrel": "#22C55E",
+  "PBH\u2019s Free Fringe": "#14B8A6",
+  PBH: "#14B8A6",
+  Other: "#64748B"
+};
+
+function orgColor(t) {
+  if (THEME === "nocolor") return "#7c789a";
+  for (var n = (t || "").toLowerCase(), o = Object.keys(ORG_COLORS), a = 0; a < o.length; a++)
+    if (o[a] !== "Other" && n.indexOf(o[a].toLowerCase()) >= 0) return ORG_COLORS[o[a]];
+  return ORG_COLORS.Other
+}
+
+function timeToMin_(t) {
+  var n = String(t || "").match(/(\d{1,2}):(\d{2})/);
+  return n ? parseInt(n[1], 10) * 60 + parseInt(n[2], 10) : null
+}
+
+function walkMin_(t, n) {
+  if (!t || !n || t.lat == null || n.lat == null || isNaN(t.lat) || isNaN(n.lat) || isNaN(t.lng) || isNaN(n.lng)) return null;
+  var o = 6371e3,
+    a = function(h) {
+      return h * Math.PI / 180
+    },
+    s = a(n.lat - t.lat),
+    d = a(n.lng - t.lng),
+    w = Math.sin(s / 2) * Math.sin(s / 2) + Math.cos(a(t.lat)) * Math.cos(a(n.lat)) * Math.sin(d / 2) * Math.sin(d / 2),
+    p = 2 * o * Math.asin(Math.min(1, Math.sqrt(w)));
+  return Math.max(1, Math.round(p / 80))
+}
+
+function fmtMin_(t) {
+  t = (t % 1440 + 1440) % 1440;
+  var n = Math.floor(t / 60),
+    o = t % 60,
+    a = n < 12 ? "am" : "pm",
+    s = n % 12;
+  return s === 0 && (s = 12), s + (o ? ":" + ("0" + o).slice(-2) : "") + a
+}
+
+function TimedDay({
+  items: t,
+  onOpen: n
+}) {
+  var o = 64,
+    a = function(v) {
+      var A = timeToMin_(v);
+      return A == null ? null : (A < 360 && (A += 1440), A)
+    },
+    s = t.map(function(v) {
+      var A = a(v.startStr);
+      if (A == null) return null;
+      var _ = a(v.endStr);
+      return (_ == null || _ <= A) && (_ = A + (v.duration || 60)), Object.assign({}, v, {
+        _s: A,
+        _e: _
+      })
+    }).filter(Boolean).sort(function(v, A) {
+      return v._s - A._s
+    });
+  if (!s.length) return React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: C.txt3,
+      padding: "12px",
+      textAlign: "center"
+    }
+  }, "Add shows that have a start time to see the day laid out.");
+  for (var d = 0; d < s.length; d++) {
+    for (var w = [], p = 0; p < d; p++) s[p]._e > s[d]._s && s[d]._e > s[p]._s && w.push(s[p]._lane);
+    for (var h = 0; w.indexOf(h) >= 0;) h++;
+    s[d]._lane = h
+  }
+  var b = 1;
+  s.forEach(function(v) {
+    v._lane + 1 > b && (b = v._lane + 1)
+  }), s.forEach(function(v) {
+    v._clash = s.some(function(A) {
+      return A !== v && A._e > v._s && v._e > A._s
+    })
+  });
+  for (var y = Math.min.apply(null, s.map(function(v) {
+      return v._s
+    })), g = Math.max.apply(null, s.map(function(v) {
+      return v._e
+    })), S = y - 30, I = g + 30, f = (I - S) / 60 * o, R = Math.floor(S / 60), E = Math.ceil(I / 60), U = [], O = 0; O < s.length - 1; O++) {
+    var M = s[O],
+      K = s[O + 1],
+      x = K._s - M._e;
+    if (!(x < 0)) {
+      var D = walkMin_(M, K) || 0,
+        J = D + 30;
+      U.push({
+        top: (M._e - S) / 60 * o,
+        height: J / 60 * o,
+        gap: x,
+        walk: D,
+        need: J,
+        ok: x >= J
+      })
+    }
+  }
+  return React.createElement("div", {
+    style: {
+      display: "flex",
+      background: "rgba(255,255,255,0.02)",
+      borderRadius: 12,
+      border: "1px solid " + C.border,
+      overflowY: "auto",
+      overflowX: "hidden",
+      maxHeight: "min(1200px, calc(100vh - 220px))"
+    }
+  }, React.createElement("div", {
+    style: {
+      width: 52,
+      flexShrink: 0,
+      position: "relative",
+      height: f
+    }
+  }, Array.from({
+    length: E - R + 1
+  }).map(function(v, A) {
+    var _ = R + A,
+      fe = (_ * 60 - S) / 60 * o;
+    return React.createElement("div", {
+      key: A,
+      style: {
+        position: "absolute",
+        top: fe - 6,
+        right: 6,
+        fontSize: 10,
+        color: C.txt3,
+        whiteSpace: "nowrap"
+      }
+    }, fmtMin_(_ * 60))
+  })), React.createElement("div", {
+    style: {
+      flex: 1,
+      position: "relative",
+      height: f,
+      minWidth: 0
+    }
+  }, Array.from({
+    length: E - R + 1
+  }).map(function(v, A) {
+    var _ = R + A,
+      fe = (_ * 60 - S) / 60 * o;
+    return React.createElement("div", {
+      key: "g" + A,
+      style: {
+        position: "absolute",
+        top: fe,
+        left: 0,
+        right: 0,
+        borderTop: "1px solid rgba(255,255,255,0.06)"
+      }
+    })
+  }), U.map(function(v, A) {
+    return React.createElement("div", {
+      key: "t" + A,
+      style: {
+        position: "absolute",
+        top: v.top,
+        height: Math.max(15, v.height),
+        left: 3,
+        right: 3,
+        zIndex: 1,
+        borderRadius: 6,
+        background: v.ok ? "rgba(34,197,94,0.16)" : "rgba(239,68,68,0.22)",
+        border: v.ok ? "1px dashed rgba(34,197,94,0.6)" : "1px dashed rgba(239,68,68,0.85)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+        padding: "0 4px"
+      }
+    }, React.createElement("span", {
+      style: {
+        fontSize: 9,
+        fontWeight: 800,
+        color: v.ok ? "#22c55e" : "#fca5a5",
+        textAlign: "center",
+        lineHeight: 1.1
+      }
+    }, "\u{1F6B6} " + v.walk + "m + 30 mins buffer" + (v.ok ? "" : " \xB7 tight!")))
+  }), s.map(function(v, A) {
+    var _ = (v._s - S) / 60 * o,
+      fe = Math.max(26, (v._e - v._s) / 60 * o - 2),
+      ue = 100 / b,
+      Re = orgColor(v.venue);
+    return React.createElement("div", {
+      key: A,
+      onClick: function() {
+        n && n(v)
+      },
+      title: (v.venue || "") + (v.venueCode ? " (#" + v.venueCode + ")" : ""),
+      style: {
+        position: "absolute",
+        top: _,
+        height: fe,
+        left: "calc(" + v._lane * ue + "% + 3px)",
+        width: "calc(" + ue + "% - 6px)",
+        background: v.wish ? "transparent" : Re,
+        border: v.wish ? "1.5px dashed " + Re : "1.5px solid transparent",
+        borderRadius: 8,
+        padding: "4px 7px",
+        overflow: "hidden",
+        color: v.wish ? C.txt : "#fff",
+        boxSizing: "border-box",
+        zIndex: 2,
+        opacity: v.wish ? .85 : 1,
+        boxShadow: v._clash ? "0 0 0 2px #ef4444" : "none",
+        cursor: n ? "pointer" : "default"
+      }
+    }, v.website && React.createElement("a", {
+      href: v.website,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      onClick: function(ee) {
+        ee.stopPropagation()
+      },
+      title: "View on edfringe.com (opens in a new tab)",
+      "aria-label": "View " + (v.title || "this show") + " on edfringe.com (opens in a new tab)",
+      style: {
+        position: "absolute",
+        top: 2,
+        right: 3,
+        color: v.wish ? C.txt2 : "rgba(255,255,255,0.92)",
+        textDecoration: "none",
+        zIndex: 4,
+        display: "inline-flex"
+      }
+    }, React.createElement(LinkIcon, null)), React.createElement("div", {
+      style: {
+        fontSize: 12,
+        fontWeight: 700,
+        lineHeight: 1.2,
+        wordBreak: "break-word",
+        paddingRight: v.website ? 15 : 0,
+        textShadow: v.wish ? "none" : "0 1px 2px rgba(0,0,0,0.35)"
+      }
+    }, v.title), React.createElement("div", {
+      style: {
+        fontSize: 11,
+        opacity: .92,
+        marginTop: 1
+      }
+    }, fmtMin_(v._s), "\u2013", fmtMin_(v._e), priceLabel(v.priceFull) ? "  \xB7  " + priceLabel(v.priceFull) : ""), fe > 48 && React.createElement("div", {
+      style: {
+        fontSize: 10,
+        opacity: .85,
+        marginTop: 1,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      }
+    }, v.venueCode ? "#" + v.venueCode + " " : "", v.venue))
+  })))
+}
+
+function Tag({
+  children: t,
+  color: n
+}) {
+  return React.createElement("span", {
+    style: {
+      fontSize: 11,
+      fontWeight: 700,
+      padding: "2px 8px",
+      borderRadius: 6,
+      background: (n || "#a855f7") + "26",
+      color: n || "#c084fc",
+      whiteSpace: "nowrap"
+    }
+  }, t)
+}
+
+function availInfo(t) {
+  var n = t.availability;
+  return t.soldOut === !0 || n === "soldout" || n === "sold_out" || n === "sold out" || n === 0 ? {
+    status: "soldout",
+    color: "#ef4444",
+    label: "Sold out",
+    soldout: !0
+  } : typeof n == "number" ? n < 30 ? {
+    status: "low",
+    color: "#f59e0b",
+    label: "Limited \u2014 running low",
+    soldout: !1
+  } : {
+    status: "good",
+    color: "#22c55e",
+    label: "Good availability",
+    soldout: !1
+  } : n === "low" || n === "limited" ? {
+    status: "low",
+    color: "#f59e0b",
+    label: "Limited \u2014 running low",
+    soldout: !1
+  } : n === "good" || n === "available" ? {
+    status: "good",
+    color: "#22c55e",
+    label: "Good availability",
+    soldout: !1
+  } : {
+    status: "unknown",
+    color: null,
+    label: "",
+    soldout: !1
+  }
+}
+
+function ShowTable({
+  rows: t,
+  limit: n,
+  cardFields: o,
+  sortKey: a,
+  sortDir: s,
+  setSortKey: d,
+  setSortDir: w,
+  plan: p,
+  booked: h,
+  toggle: b,
+  onBookClick: y,
+  onOpen: g
+}) {
+  var S = o || {},
+    I = {
+      padding: "8px 10px",
+      fontSize: 10,
+      fontWeight: 800,
+      textTransform: "uppercase",
+      letterSpacing: .4,
+      color: C.txt3,
+      textAlign: "left",
+      whiteSpace: "nowrap"
+    },
+    f = {
+      padding: "8px 10px",
+      verticalAlign: "top"
+    },
+    R = function(x) {
+      return {
+        padding: "4px 7px",
+        borderRadius: 7,
+        border: "1px solid " + C.border,
+        cursor: "pointer",
+        fontSize: 12,
+        fontWeight: 800,
+        background: x ? "rgba(52,211,153,0.2)" : "rgba(255,255,255,0.08)",
+        color: x ? "#34d399" : C.txt2
+      }
+    },
+    E = function(x, D) {
+      a === x ? w(function(J) {
+        return J === "asc" ? "desc" : "asc"
+      }) : (d(x), w(D || "asc"))
+    },
+    U = function(x) {
+      switch (a) {
+        case "title":
+          return (x.title || "").toLowerCase();
+        case "artist":
+          return (x.artist || "").toLowerCase();
+        case "venue":
+          return (x.venue || "").toLowerCase();
+        case "genre":
+          return (x.genre || "").toLowerCase();
+        case "dates":
+          return x.first || "9999-99-99";
+        case "start": {
+          var D = timeToMin_(x.startStr);
+          return D ?? 99999
+        }
+        case "end": {
+          var J = timeToMin_(x.endStr);
+          return J ?? 99999
+        }
+        case "duration": {
+          var v = Number(x.duration);
+          return isNaN(v) ? 99999 : v
+        }
+        case "price": {
+          var A = poundsOf(x.priceFull);
+          return isNaN(A) ? -1 : A
+        }
+        case "wish":
+          return p.has(x.code) ? 0 : 1;
+        case "booked":
+          return h[x.code] ? 0 : 1;
+        default:
+          return ""
+      }
+    },
+    O = function(x) {
+      if (!a) return x;
+      var D = s === "desc" ? -1 : 1;
+      return x.slice().sort(function(J, v) {
+        var A = U(J),
+          _ = U(v);
+        return A < _ ? -1 * D : A > _ ? 1 * D : 0
+      })
+    },
+    M = function(x, D, J) {
+      return React.createElement("th", {
+        onClick: function() {
+          E(x, J)
+        },
+        style: Object.assign({}, I, {
+          cursor: "pointer",
+          userSelect: "none"
+        })
+      }, D, a === x ? s === "asc" ? " \u25B2" : " \u25BC" : "")
+    },
+    K = O(t).slice(0, n || 99999);
+  return React.createElement("div", {
+    style: {
+      overflowX: "auto",
+      border: "1px solid " + C.border,
+      borderRadius: 12
+    }
+  }, React.createElement("table", {
+    style: {
+      width: "100%",
+      borderCollapse: "collapse",
+      fontSize: 13,
+      color: C.txt
+    }
+  }, React.createElement("thead", null, React.createElement("tr", {
+    style: {
+      background: "rgba(255,255,255,0.03)"
+    }
+  }, M("title", "Show"), S.artist !== !1 && M("artist", "Artist"), S.venue !== !1 && M("venue", "Venue"), S.dates !== !1 && M("dates", "Dates"), S.time !== !1 && M("start", "Start"), S.time !== !1 && M("end", "End"), S.time !== !1 && M("duration", "Duration"), S.price !== !1 && M("price", "Price", "desc"), S.genre !== !1 && M("genre", "Genre"), React.createElement("th", {
+    style: Object.assign({}, I, {
+      cursor: "pointer"
+    })
+  }, React.createElement("span", {
+    onClick: function() {
+      E("wish")
+    },
+    title: "Sort: wishlisted first",
+    style: {
+      cursor: "pointer",
+      opacity: a === "wish" ? 1 : .6
+    }
+  }, "\u2661"), " ", React.createElement("span", {
+    onClick: function() {
+      E("booked")
+    },
+    title: "Sort: booked first",
+    style: {
+      cursor: "pointer",
+      opacity: a === "booked" ? 1 : .6
+    }
+  }, "\u{1F39F}")))), React.createElement("tbody", null, K.map(function(x) {
+    var D = orgColor(x.venue);
+    return React.createElement("tr", {
+      key: x.code,
+      style: {
+        borderTop: "1px solid " + C.border
+      }
+    }, React.createElement("td", {
+      style: Object.assign({}, f, {
+        borderLeft: "3px solid " + D
+      })
+    }, React.createElement("span", {
+      onClick: function() {
+        g(x)
+      },
+      style: {
+        fontWeight: 700,
+        cursor: "pointer"
+      }
+    }, x.title)), S.artist !== !1 && React.createElement("td", {
+      style: Object.assign({}, f, {
+        color: C.txt2
+      })
+    }, x.artist || "\u2014"), S.venue !== !1 && React.createElement("td", {
+      style: Object.assign({}, f, {
+        color: C.txt2
+      })
+    }, x.venue, x.venueCode ? " (#" + x.venueCode + ")" : ""), S.dates !== !1 && React.createElement("td", {
+      style: Object.assign({}, f, {
+        color: C.txt2,
+        whiteSpace: "nowrap"
+      })
+    }, dateRange(x.first, x.last)), S.time !== !1 && React.createElement("td", {
+      style: Object.assign({}, f, {
+        color: C.txt2,
+        whiteSpace: "nowrap"
+      })
+    }, x.startStr || "\u2014"), S.time !== !1 && React.createElement("td", {
+      style: Object.assign({}, f, {
+        color: C.txt2,
+        whiteSpace: "nowrap"
+      })
+    }, x.endStr || "\u2014"), S.time !== !1 && React.createElement("td", {
+      style: Object.assign({}, f, {
+        color: C.txt2,
+        whiteSpace: "nowrap"
+      })
+    }, x.duration ? x.duration + "m" : "\u2014"), S.price !== !1 && React.createElement("td", {
+      style: Object.assign({}, f, {
+        fontWeight: 700,
+        whiteSpace: "nowrap"
+      })
+    }, priceLabel(x.priceFull) || "\u2014"), S.genre !== !1 && React.createElement("td", {
+      style: Object.assign({}, f, {
+        color: C.txt2
+      })
+    }, x.genre || "\u2014"), React.createElement("td", {
+      style: Object.assign({}, f, {
+        whiteSpace: "nowrap"
+      })
+    }, React.createElement("button", {
+      onClick: function() {
+        b(x.code)
+      },
+      title: "Wishlist",
+      style: R(p.has(x.code))
+    }, p.has(x.code) ? "\u2713" : "+", "\u2661"), " ", React.createElement("button", {
+      onClick: function() {
+        y(x)
+      },
+      title: "Booked",
+      style: R(!!h[x.code])
+    }, h[x.code] ? "\u2713" : "+", "\u{1F39F}")))
+  }))))
+}
+
+function ShowCard({
+  s: t,
+  inPlan: n,
+  isBk: o,
+  hasNote: a,
+  fields: s,
+  onWish: d,
+  onBook: w,
+  onOpen: p
+}) {
+  var h = s || {},
+    b = availInfo(t),
+    y = {
+      width: 38,
+      height: 38,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 10,
+      cursor: "pointer",
+      flexShrink: 0,
+      textDecoration: "none"
+    };
+  return React.createElement("div", {
+    style: {
+      position: "relative",
+      background: C.card,
+      border: "1px solid " + C.border,
+      borderLeft: "4px solid " + gcolor(t.genre),
+      borderRadius: 14,
+      padding: "12px 14px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 6,
+      height: "100%",
+      opacity: b.soldout ? .55 : 1
+    }
+  }, b.status !== "unknown" && React.createElement("span", {
+    role: "img",
+    "aria-label": b.label,
+    title: b.label,
+    style: {
+      position: "absolute",
+      top: 9,
+      right: 10,
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      background: b.color,
+      color: "#0b0b14",
+      fontSize: 11,
+      fontWeight: 900,
+      lineHeight: "16px",
+      textAlign: "center",
+      boxShadow: "0 0 0 2px " + C.card,
+      zIndex: 2
+    }
+  }, b.status === "soldout" ? "\u2715" : b.status === "low" ? "!" : "\u2713"), b.soldout && React.createElement("span", {
+    style: {
+      position: "absolute",
+      top: 9,
+      right: 28,
+      fontSize: 9,
+      fontWeight: 900,
+      color: "#ef4444",
+      letterSpacing: .5,
+      zIndex: 2
+    }
+  }, "SOLD OUT"), React.createElement("div", {
+    onClick: p,
+    style: {
+      cursor: "pointer",
+      flex: "1 1 auto",
+      minHeight: 0,
+      overflow: "hidden"
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 16,
+      fontWeight: 800,
+      lineHeight: 1.2,
+      paddingRight: 16,
+      display: "-webkit-box",
+      WebkitLineClamp: 2,
+      WebkitBoxOrient: "vertical",
+      overflow: "hidden"
+    }
+  }, t.title, a ? " \u{1F4DD}" : ""), h.artist !== !1 && t.artist && React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: C.txt2,
+      marginTop: 2
+    }
+  }, t.artist), h.venue !== !1 && React.createElement("div", {
+    style: {
+      fontSize: 14,
+      color: C.txt2,
+      marginTop: 6
+    }
+  }, "\u{1F4CD} ", t.venue), h.dates !== !1 && React.createElement("div", {
+    style: {
+      fontSize: 14,
+      color: C.txt2,
+      marginTop: 3
+    }
+  }, "\u{1F5D3} ", dateRange(t.first, t.last), t.age ? " \xB7 " + t.age : ""), h.time !== !1 && t.startStr && React.createElement("div", {
+    style: {
+      fontSize: 14,
+      color: C.txt2,
+      marginTop: 3
+    }
+  }, "\u{1F550} ", t.startStr, t.endStr ? "\u2013" + t.endStr : "", t.duration ? " \xB7 " + t.duration + " min" : ""), h.price !== !1 && React.createElement("div", {
+    style: {
+      fontSize: 15,
+      fontWeight: 800,
+      marginTop: 4,
+      textAlign: "right",
+      color: priceLabel(t.priceFull) === "Free" ? "#34d399" : C.txt
+    }
+  }, priceLabel(t.priceFull)), h.genre !== !1 && React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 4,
+      flexWrap: "wrap",
+      marginTop: 6
+    }
+  }, t.genre && React.createElement(Tag, {
+    color: gcolor(t.genre)
+  }, t.genre), t.tags.slice(0, 2).map((g, S) => React.createElement(Tag, {
+    key: S
+  }, g)))), React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6,
+      flexShrink: 0,
+      marginTop: 2,
+      alignItems: "center"
+    }
+  }, React.createElement("button", {
+    onClick: d,
+    "aria-label": n ? "Remove " + (t.title || "this show") + " from your wishlist" : "Add " + (t.title || "this show") + " to your wishlist",
+    title: n ? "On your wishlist" : "Add to wishlist",
+    style: {
+      ...y,
+      border: "1px solid " + (n ? "#34d399" : C.border),
+      background: n ? "rgba(52,211,153,0.16)" : "transparent",
+      color: n ? "#34d399" : C.txt2,
+      fontSize: 17
+    }
+  }, n ? "\u2665" : "\u2661"), React.createElement("button", {
+    onClick: w,
+    "aria-label": o ? "Edit booking for " + (t.title || "this show") : "Mark " + (t.title || "this show") + " as booked",
+    title: o ? "Booked" : "Mark as booked",
+    style: {
+      ...y,
+      border: "1px solid " + (o ? "#93c5fd" : C.border),
+      background: o ? "rgba(96,165,250,0.18)" : "transparent",
+      color: o ? "#93c5fd" : C.txt2,
+      fontSize: 15
+    }
+  }, "\u{1F39F}"), t.website && React.createElement("a", {
+    href: t.website,
+    target: "_blank",
+    rel: "noopener noreferrer",
+    onClick: g => g.stopPropagation(),
+    title: "View listing on edfringe.com (opens in a new tab)",
+    "aria-label": "View " + (t.title || "this show") + " listing on edfringe.com (opens in a new tab)",
+    style: {
+      ...y,
+      border: "1px solid " + C.border,
+      background: "transparent",
+      color: C.txt2
+    }
+  }, React.createElement(LinkIcon, null))))
+}
+
+function fetchAdminEmail(t) {
+  try {
+    var n = "__fa" + Math.floor(Math.random() * 1e9);
+    window[n] = function(a) {
+      var s = null;
+      try {
+        s = a.table.rows[0].c[0].v
+      } catch {}
+      try {
+        delete window[n]
+      } catch {}
+      t(s)
+    };
+    var o = document.createElement("script");
+    o.src = "https://docs.google.com/spreadsheets/d/15aHnYGBL73-n6MOf2Su1hlEG7FxReUjEyc90_AZugB0/gviz/tq?tqx=out:json;responseHandler:" + n + "&sheet=" + encodeURIComponent("Admin email") + "&range=A1", o.onerror = function() {
+      t(null)
+    }, document.head.appendChild(o)
+  } catch {
+    t(null)
+  }
+}
+
+function exportAllData() {
+  try {
+    for (var t = {}, n = 0; n < localStorage.length; n++) {
+      var o = localStorage.key(n);
+      o && o.indexOf("fringe") === 0 && (t[o] = localStorage.getItem(o))
+    }
+    return LZString.compressToEncodedURIComponent(JSON.stringify(t))
+  } catch {
+    return ""
+  }
+}
+
+function importAllData(t) {
+  try {
+    var n = JSON.parse(LZString.decompressFromEncodedURIComponent(t));
+    return !n || typeof n != "object" ? !1 : (Object.keys(n).forEach(function(o) {
+      o.indexOf("fringe") === 0 && localStorage.setItem(o, n[o])
+    }), !0)
+  } catch {
+    return !1
+  }
+}
+
+function migrateData(t, n) {}
+
+function pubBackupData() {
+  var t = {};
+  try {
+    for (var n = 0; n < localStorage.length; n++) {
+      var o = localStorage.key(n);
+      o && o.indexOf("fringe") === 0 && (t[o] = localStorage.getItem(o))
+    }
+  } catch {}
+  return t
+}
+
+function downloadBackup() {
+  try {
+    var t = {
+        app: "fringe-public",
+        version: APP_DATA_VERSION,
+        savedAt: new Date().toISOString(),
+        data: pubBackupData()
+      },
+      n = new Blob([JSON.stringify(t, null, 2)], {
+        type: "application/json"
+      }),
+      o = URL.createObjectURL(n),
+      a = document.createElement("a");
+    a.href = o, a.download = "fringe-planner-backup-" + new Date().toISOString().slice(0, 10) + ".json", document.body.appendChild(a), a.click(), document.body.removeChild(a), setTimeout(function() {
+      URL.revokeObjectURL(o)
+    }, 1500)
+  } catch (s) {
+    try {
+      window.alert("Backup failed: " + (s && s.message || s))
+    } catch {}
+  }
+}
+
+function restoreBackup(t, n) {
+  var o = new FileReader;
+  o.onload = function() {
+    try {
+      var a = JSON.parse(o.result),
+        s = a && a.data;
+      if (!s || typeof s != "object") throw new Error("this doesn't look like a planner backup file");
+      if (!window.confirm("Restore this backup? It replaces the wishlist, bookings, options and settings saved on this device.")) return;
+      Object.keys(s).forEach(function(d) {
+        d.indexOf("fringe") === 0 && typeof s[d] == "string" && localStorage.setItem(d, s[d])
+      }), a.version && a.version < APP_DATA_VERSION && (a.version, void 0), localStorage.setItem("fringe-public-data-version", String(APP_DATA_VERSION)), n && n()
+    } catch (d) {
+      try {
+        window.alert("Couldn't restore: " + (d && d.message || d))
+      } catch {}
+    }
+  }, o.onerror = function() {
+    try {
+      window.alert("Couldn't read that file.")
+    } catch {}
+  }, o.readAsText(t)
+}
+
+function SyncIcon() {
+  return React.createElement("svg", {
+    "aria-hidden": "true",
+    width: "16",
+    height: "16",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round"
+  }, React.createElement("rect", {
+    x: "9",
+    y: "9",
+    width: "12",
+    height: "12",
+    rx: "2"
+  }), React.createElement("path", {
+    d: "M5 15V5a2 2 0 0 1 2-2h10"
+  }))
+}
+
+function SyncModal({
+  onClose: t
+}) {
+  var n = useState(""),
+    o = n[0],
+    a = n[1],
+    s = window.location.origin + window.location.pathname + "#sync=" + exportAllData(),
+    d = function() {
+      try {
+        navigator.clipboard.writeText(s)
+      } catch {}
+      try {
+        window.prompt("Copy this link, then open it on your other device:", s)
+      } catch {}
+    },
+    w = function() {
+      var h = (o || "").trim(),
+        b = h.match(/[#&]sync=([^&\s]+)/);
+      if (b && (h = b[1]), h && importAllData(h)) try {
+        window.location.replace(window.location.pathname)
+      } catch {} else try {
+        window.alert("Couldn't read that link or code.")
+      } catch {}
+    },
+    p = {
+      width: "100%",
+      padding: "11px",
+      borderRadius: 11,
+      border: "none",
+      background: C.accent,
+      color: "#fff",
+      fontSize: 14,
+      fontWeight: 800,
+      cursor: "pointer",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8
+    };
+  return React.createElement("div", {
+    onClick: t,
+    onKeyDown: function(h) {
+      h.key === "Escape" && t()
+    },
+    tabIndex: -1,
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.65)",
+      zIndex: 1400,
+      display: "flex",
+      alignItems: "flex-start",
+      justifyContent: "center",
+      padding: "40px 12px",
+      overflowY: "auto"
+    }
+  }, React.createElement("div", {
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "Copy my data to another device",
+    onClick: function(h) {
+      h.stopPropagation()
+    },
+    style: {
+      background: C.card,
+      border: "1px solid " + C.border,
+      borderRadius: 16,
+      maxWidth: 460,
+      width: "100%",
+      padding: "20px",
+      position: "relative"
+    }
+  }, React.createElement("button", {
+    onClick: t,
+    "aria-label": "Close",
+    style: {
+      position: "absolute",
+      top: 12,
+      right: 12,
+      background: "none",
+      border: "none",
+      color: C.txt2,
+      fontSize: 20,
+      cursor: "pointer"
+    }
+  }, "\u2715"), React.createElement("div", {
+    style: {
+      fontSize: 18,
+      fontWeight: 900,
+      marginBottom: 4
+    }
+  }, "Copy my data to another device"), React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: C.txt2,
+      lineHeight: 1.5,
+      marginBottom: 16
+    }
+  }, "One link moves everything saved on this device \u2014 wishlist, bookings, Pitch-a-Day options, availability and settings. No login."), React.createElement("button", {
+    onClick: d,
+    style: p
+  }, React.createElement(SyncIcon, null), " Copy my transfer link"), React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      marginTop: 8
+    }
+  }, React.createElement("button", {
+    onClick: downloadBackup,
+    style: {
+      flex: 1,
+      padding: "10px",
+      borderRadius: 11,
+      border: "1px solid " + C.border,
+      background: "transparent",
+      color: C.txt,
+      fontSize: 13,
+      fontWeight: 800,
+      cursor: "pointer"
+    }
+  }, "\u2B07 Download backup file"), React.createElement("label", {
+    style: {
+      flex: 1,
+      padding: "10px",
+      borderRadius: 11,
+      border: "1px solid " + C.border,
+      background: "transparent",
+      color: C.txt,
+      fontSize: 13,
+      fontWeight: 800,
+      cursor: "pointer",
+      textAlign: "center",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center"
+    }
+  }, "\u21A5 Restore from file", React.createElement("input", {
+    type: "file",
+    accept: "application/json,.json",
+    style: {
+      display: "none"
+    },
+    onChange: function(h) {
+      var b = h.target.files && h.target.files[0];
+      b && restoreBackup(b, function() {
+        window.location.reload()
+      })
+    }
+  }))), React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: C.txt3,
+      textAlign: "center",
+      margin: "14px 0 10px"
+    }
+  }, "\u2014 then on the other device \u2014"), React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.txt3,
+      fontWeight: 700,
+      textTransform: "uppercase",
+      letterSpacing: .5,
+      marginBottom: 6
+    }
+  }, "Paste your transfer link"), React.createElement("textarea", {
+    value: o,
+    onChange: function(h) {
+      a(h.target.value)
+    },
+    "aria-label": "Paste your transfer link",
+    placeholder: "Paste the link here (or just open it directly)\u2026",
+    rows: 2,
+    style: {
+      width: "100%",
+      boxSizing: "border-box",
+      padding: "9px 11px",
+      borderRadius: 10,
+      border: "1px solid " + C.border,
+      background: "rgba(255,255,255,0.06)",
+      color: C.txt,
+      fontSize: 13,
+      outline: "none",
+      resize: "vertical",
+      fontFamily: "inherit"
+    }
+  }), React.createElement("button", {
+    onClick: w,
+    style: {
+      width: "100%",
+      marginTop: 8,
+      padding: "10px",
+      borderRadius: 11,
+      border: "1px solid " + C.border,
+      background: "transparent",
+      color: C.txt,
+      fontSize: 14,
+      fontWeight: 800,
+      cursor: "pointer"
+    }
+  }, "Import & replace this device\u2019s data")))
+}
+
+function parseHash() {
+  try {
+    var t = typeof window < "u" && window.location && window.location.hash || "";
+    if (t.indexOf("view=") < 0) return {};
+    var n = new URLSearchParams(t.replace(/^#/, "")),
+      o = {};
+    return n.forEach(function(a, s) {
+      o[s] = a
+    }), o
+  } catch {
+    return {}
+  }
+}
+
+function weekdayOf_(t) {
+  var n = new Date(t + "T12:00:00");
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][n.getDay()]
+}
+
+function fitsAvail_(t, n, o, a) {
+  return !a || !a.length ? !0 : a.some(function(s) {
+    return s.day === o && t >= s.from && n <= s.to
+  })
+}
+
+function autoPlan_(t, n, o) {
+  o = o || {};
+  var a = o.priceCap != null && o.priceCap !== "" ? Number(o.priceCap) : null,
+    s = o.maxPerDay ? Number(o.maxPerDay) : 99,
+    d = !!o.evenings,
+    w = !!o.weekends,
+    p = 30,
+    h = [],
+    b = {};
+  (t || []).forEach(function(I) {
+    if (a != null && typeof I.priceFull == "number" && I.priceFull > a) {
+      h.push({
+        s: I,
+        reason: "Over your \xA3" + a + " cap"
+      });
+      return
+    }
+    var f = [];
+    if ((I.performances || []).forEach(function(R) {
+        if (!(!R.date || !R.start)) {
+          var E = timeToMin_(R.start);
+          if (E != null) {
+            var U = R.duration || I.duration || 60,
+              O = E + U,
+              M = weekdayOf_(R.date);
+            fitsAvail_(E, O, M, n) && (I.availability != null && R.availKnown && R.onSale === !1 || f.push({
+              code: I.code,
+              s: I,
+              date: R.date,
+              sm: E,
+              em: O,
+              wd: M,
+              evening: E >= 1020,
+              weekend: M === "Sat" || M === "Sun"
+            }))
+          }
+        }
+      }), !f.length) {
+      h.push({
+        s: I,
+        reason: n && n.length ? "No on-sale time inside your free windows" : "No usable performance time"
+      });
+      return
+    }
+    b[I.code] = f
+  });
+  var y = Object.keys(b).sort(function(I, f) {
+      return b[I].length - b[f].length
+    }),
+    g = [],
+    S = function(I) {
+      var f = 0;
+      return d && I.evening && (f -= 2), w && I.weekend && (f -= 2), f
+    };
+  return y.forEach(function(I) {
+    for (var f = b[I].slice().sort(function(v, A) {
+        var _ = S(v) - S(A);
+        return _ || (v.date !== A.date ? v.date < A.date ? -1 : 1 : v.sm - A.sm)
+      }), R = null, E = 0; E < f.length && !R; E++) {
+      var U = f[E],
+        O = g.filter(function(v) {
+          return v.date === U.date
+        });
+      if (!(O.length >= s)) {
+        for (var M = !0, K = 0; K < O.length; K++) {
+          var x = O[K];
+          if (U.sm < x.em && x.sm < U.em) {
+            M = !1;
+            break
+          }
+          var D = walkMin_(U.s, x.s) || 0,
+            J = D + p;
+          if (U.sm >= x.em) {
+            if (U.sm - x.em < J) {
+              M = !1;
+              break
+            }
+          } else if (x.sm - U.em < J) {
+            M = !1;
+            break
+          }
+        }
+        M && (R = U)
+      }
+    }
+    R ? g.push(R) : h.push({
+      s: b[I][0].s,
+      reason: "Clashes / no free slot with travel time"
+    })
+  }), {
+    assigned: g,
+    unsched: h
+  }
+}
+
+function parseAvailability(t) {
+  if (!t) return [];
+  var n = {
+      monday: "Mon",
+      mon: "Mon",
+      tuesday: "Tue",
+      tues: "Tue",
+      tue: "Tue",
+      wednesday: "Wed",
+      weds: "Wed",
+      wed: "Wed",
+      thursday: "Thu",
+      thurs: "Thu",
+      thur: "Thu",
+      thu: "Thu",
+      friday: "Fri",
+      fri: "Fri",
+      saturday: "Sat",
+      sat: "Sat",
+      sunday: "Sun",
+      sun: "Sun"
+    },
+    o = {
+      weekends: ["Sat", "Sun"],
+      weekend: ["Sat", "Sun"],
+      weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+      weekday: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+      everyday: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      daily: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    },
+    a = String(t).toLowerCase().replace(/every day|all week|any day|anytime|all days/g, "everyday").replace(/\band\b/g, ",").replace(/[;&]/g, ","),
+    s = function(p) {
+      if (p = p.trim(), p === "noon" || p === "midday") return 720;
+      if (p === "midnight") return 0;
+      var h = p.match(/(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)?/);
+      if (!h) return null;
+      var b = parseInt(h[1], 10),
+        y = h[2] ? parseInt(h[2], 10) : 0,
+        g = h[3];
+      return g === "pm" && b < 12 && (b += 12), g === "am" && b === 12 && (b = 0), !g && b <= 7 && (b += 12), b * 60 + y
+    },
+    d = function(p) {
+      if (/all day|whole day|any ?time/.test(p)) return {
+        from: 0,
+        to: 1440
+      };
+      if (/morning/.test(p)) return {
+        from: 360,
+        to: 720
+      };
+      if (/afternoon/.test(p)) return {
+        from: 720,
+        to: 1020
+      };
+      if (/evening/.test(p)) return {
+        from: 1020,
+        to: 1320
+      };
+      if (/late|night/.test(p)) return {
+        from: 1320,
+        to: 1440
+      };
+      var h = p.match(/(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?|noon|midday|midnight)\s*(?:-|to|until|til)\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?|noon|midday|midnight)/);
+      if (h) {
+        var b = s(h[1]),
+          y = s(h[2]);
+        if (b != null && y != null) return {
+          from: b,
+          to: y <= b ? 1440 : y
+        }
+      }
+      var g = p.match(/(?:from|after)\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?|noon|midday|midnight)/);
+      if (g) {
+        var S = s(g[1]);
+        if (S != null) return {
+          from: S,
+          to: 1440
+        }
+      }
+      var I = p.match(/(?:before|until|til|by)\s*(\d{1,2}(?:[:.]\d{2})?\s*(?:am|pm)?|noon|midday|midnight)/);
+      if (I) {
+        var f = s(I[1]);
+        if (f != null) return {
+          from: 0,
+          to: f
+        }
+      }
+      return {
+        from: 0,
+        to: 1440
+      }
+    },
+    w = [];
+  return a.split(",").forEach(function(p) {
+    if (p = p.trim(), !!p) {
+      var h = [];
+      if (Object.keys(o).forEach(function(y) {
+          p.indexOf(y) >= 0 && o[y].forEach(function(g) {
+            h.indexOf(g) < 0 && h.push(g)
+          })
+        }), Object.keys(n).forEach(function(y) {
+          new RegExp("\\b" + y + "\\b").test(p) && h.indexOf(n[y]) < 0 && h.push(n[y])
+        }), !!h.length) {
+        var b = d(p);
+        h.forEach(function(y) {
+          w.push({
+            day: y,
+            from: b.from,
+            to: b.to
+          })
+        })
+      }
+    }
+  }), w
+}
+
+function planSet_(picked, opts) {
+  opts = opts || {};
+  var maxCost = (opts.maxCost != null && opts.maxCost !== "") ? Number(opts.maxCost) : Infinity;
+  var maxPer = opts.maxPer ? Number(opts.maxPer) : Infinity;
+  var brk = opts.breakMin ? Number(opts.breakMin) : 0;
+  var walkMax = (opts.walkMax != null && opts.walkMax !== "") ? Number(opts.walkMax) : Infinity;
+  var prefEve = !!opts.prefEve, prefWk = !!opts.prefWk, venClose = !!opts.venClose;
+  function walkMin(a, b) {
+    if (a.lat == null || a.lng == null || b.lat == null || b.lng == null) return 0;
+    var R = 6371, dLat = (b.lat - a.lat) * Math.PI / 180, dLng = (b.lng - a.lng) * Math.PI / 180;
+    var la1 = a.lat * Math.PI / 180, la2 = b.lat * Math.PI / 180;
+    var x = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return Math.round(2 * R * Math.asin(Math.min(1, Math.sqrt(x))) * 12.5);
+  }
+  function endOf(s) { var st = timeToMin_(s.startStr); return (timeToMin_(s.endStr) != null ? timeToMin_(s.endStr) : (st != null ? st + (Number(s.duration) || 60) : null)); }
+  var byDate = {};
+  (picked || []).forEach(function(s) {
+    var dates = (s.performances && s.performances.length) ? s.performances.map(function(pf) { return pf.date; }) : (s.first ? [s.first] : []);
+    dates.forEach(function(d) { if (d) (byDate[d] = byDate[d] || []).push(s); });
+  });
+  var best = null;
+  Object.keys(byDate).forEach(function(d) {
+    var cand = byDate[d].filter(function(s) { return timeToMin_(s.startStr) != null; }).sort(function(a, b) { return timeToMin_(a.startStr) - timeToMin_(b.startStr); });
+    var sched = [], cost = 0, unfit = [];
+    cand.forEach(function(s) {
+      var reason = null, st = timeToMin_(s.startStr), pr = Number(s.priceFull) || 0, last = sched[sched.length - 1];
+      if (sched.length >= maxPer) reason = "Over your max shows/day";
+      else if (last) {
+        var w = walkMin(last, s), need = endOf(last) + brk + w;
+        if (st < need) reason = (w > 0) ? ("Not enough time to get there (" + w + " min walk)") : ("Clashes with " + last.title);
+        else if (w > walkMax) reason = "Too far to walk (" + w + " min)";
+      }
+      if (!reason && cost + pr > maxCost) reason = "Would exceed your day budget";
+      if (reason) unfit.push({ show: s, reason: reason });
+      else { sched.push(s); cost += pr; }
+    });
+    var score = sched.length * 100;
+    if (prefEve) score += sched.filter(function(s) { return timeToMin_(s.startStr) >= 1020; }).length * 8;
+    if (prefWk) { var dow = new Date(d + "T12:00:00").getDay(); if (dow === 0 || dow === 6) score += 25; }
+    if (venClose && sched.length > 1) { var tw = 0; for (var i = 1; i < sched.length; i++) tw += walkMin(sched[i - 1], sched[i]); score -= tw; }
+    if (!best || score > best.score) best = { date: d, sched: sched, cost: cost, unfit: unfit, score: score };
+  });
+  if (!best) return { date: null, sched: [], cost: 0, unfit: (picked || []).map(function(s) { return { show: s, reason: "No performance date/time" }; }) };
+  var inSched = {};
+  best.sched.forEach(function(s) { inSched[s.code] = 1; });
+  var reasoned = {};
+  best.unfit.forEach(function(u) { reasoned[u.show.code] = 1; });
+  (picked || []).forEach(function(s) { if (!inSched[s.code] && !reasoned[s.code]) best.unfit.push({ show: s, reason: "No performance on the chosen day" }); });
+  return best;
+}
+function PlannerView({
+  avail: t,
+  setAvail: n,
+  planShows: o,
+  shows: cat,
+  isMobile: a,
+  onAddToBookings: s
+}) {
+  var d = useState(""),
+    w = d[0],
+    p = d[1],
+    h = useState("Fri"),
+    b = h[0],
+    y = h[1],
+    g = useState("18:00"),
+    S = g[0],
+    I = g[1],
+    f = useState("23:00"),
+    R = f[0],
+    E = f[1],
+    U = useState(""),
+    O = U[0],
+    M = U[1],
+    K = useState("4"),
+    x = K[0],
+    D = K[1],
+    J = useState(!1),
+    v = J[0],
+    A = J[1],
+    _ = useState(!1),
+    fe = _[0],
+    ue = _[1],
+    Re = useState(null),
+    ee = Re[0],
+    ct = Re[1],
+    Qe = useState(!1),
+    it = Qe[0],
+    $e = Qe[1], PKc = useState(new Set()), pickedCodes = PKc[0], setPicked = PKc[1], MCc = useState(""), maxCost = MCc[0], setMaxCost = MCc[1], MPc = useState("4"), maxPer = MPc[0], setMaxPer = MPc[1], PEc = useState(!1), prefEve = PEc[0], setPrefEve = PEc[1], PWc = useState(!1), prefWk = PWc[0], setPrefWk = PWc[1], BKc = useState("30"), breakMin = BKc[0], setBreakMin = BKc[1], VCc = useState(!1), venClose = VCc[0], setVenClose = VCc[1], WMc = useState("20"), walkMax = WMc[0], setWalkMax = WMc[1], PQc = useState(""), pickQ = PQc[0], setPickQ = PQc[1], PLc = useState(null), plannedSet = PLc[0], setPlannedSet = PLc[1], numStyle = {width:"100%",boxSizing:"border-box",padding:"6px 8px",borderRadius:8,border:"1px solid "+C.border,background:"rgba(255,255,255,0.06)",color:C.txt,fontSize:13,colorScheme:"dark"}, mkLbl = function(txt,input){return React.createElement("label",{style:{display:"flex",flexDirection:"column",gap:3,fontSize:11,color:C.txt2,fontWeight:700}},txt,input);}, mkChk = function(txt,val,onT){return React.createElement("label",{style:{display:"flex",alignItems:"center",gap:8,fontSize:13,color:C.txt2,cursor:"pointer"}},React.createElement("input",{type:"checkbox",checked:val,onChange:onT,style:{width:16,height:16,cursor:"pointer"}}),txt);}, at = function() {
+      $e(!1), ct(autoPlan_(o || [], t || [], {
+        priceCap: O,
+        maxPerDay: x,
+        evenings: v,
+        weekends: fe
+      }))
+    },
+    se = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    et = function(W) {
+      !W || !W.length || n(function(te) {
+        var q = (te || []).slice();
+        return W.forEach(function(ae) {
+          q.some(function(Y) {
+            return Y.day === ae.day && Y.from === ae.from && Y.to === ae.to
+          }) || q.push(ae)
+        }), q
+      })
+    },
+    X = function() {
+      var W = parseAvailability(w);
+      if (W.length) et(W), p("");
+      else try {
+        window.alert("Couldn't read that. Try e.g. all day Sat, Sun from 6pm")
+      } catch {}
+    },
+    xe = function() {
+      var W = timeToMin_(S),
+        te = timeToMin_(R);
+      if (!(W == null || te == null)) {
+        var q = b === "Weekend" ? ["Sat", "Sun"] : b === "Weekdays" ? ["Mon", "Tue", "Wed", "Thu", "Fri"] : b === "Any" ? se : [b];
+        et(q.map(function(ae) {
+          return {
+            day: ae,
+            from: W,
+            to: te <= W ? 1440 : te
+          }
+        }))
+      }
+    },
+    lt = function(W) {
+      return W.day + " \xB7 " + (W.from <= 0 && W.to >= 1440 ? "all day" : fmtMin_(W.from) + "\u2013" + fmtMin_(W.to))
+    },
+    Le = (t || []).map(function(W, te) {
+      return {
+        w: W,
+        i: te
+      }
+    }).sort(function(W, te) {
+      return se.indexOf(W.w.day) - se.indexOf(te.w.day) || W.w.from - te.w.from
+    }),
+    ye = {
+      padding: "9px 11px",
+      borderRadius: 10,
+      border: "1px solid " + C.border,
+      background: "rgba(255,255,255,0.06)",
+      color: C.txt,
+      fontSize: 14,
+      colorScheme: "dark",
+      outline: "none"
+    },
+    tt = {
+      padding: "9px 16px",
+      borderRadius: 10,
+      border: "none",
+      background: C.accent,
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: 800,
+      cursor: "pointer"
+    };
+  return React.createElement("div", null, React.createElement("p", {
+    style: {
+      fontSize: 16,
+      color: C.txt2,
+      margin: "0 0 18px",
+      lineHeight: 1.5
+    }
+  }, "Let me know when you're free and I can help you to plan your Fringe experience for you."), React.createElement("div", {
+    style: {
+      fontSize: 16,
+      fontWeight: 900,
+      marginBottom: 12
+    }
+  }, "\u{1F5D3}\uFE0F Availability"), React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 16,
+      flexDirection: a ? "column" : "row",
+      alignItems: "stretch",
+      marginBottom: 16
+    }
+  }, React.createElement("div", {
+    style: {
+      flex: "1 1 50%",
+      minWidth: 0
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.txt3,
+      fontWeight: 700,
+      textTransform: "uppercase",
+      letterSpacing: .5,
+      marginBottom: 6
+    }
+  }, "Tell me when you're free\u2026"), React.createElement("textarea", {
+    value: w,
+    onChange: function(W) {
+      p(W.target.value)
+    },
+    "aria-label": "Describe your free times in words",
+    placeholder: "e.g. free all day Fri and Sat from 6pm; Sun mornings; weekdays after 5pm",
+    rows: 2,
+    style: Object.assign({}, ye, {
+      width: "100%",
+      boxSizing: "border-box",
+      resize: "vertical",
+      fontFamily: "inherit"
+    })
+  }), React.createElement("button", {
+    onClick: X,
+    style: Object.assign({}, tt, {
+      marginTop: 8
+    })
+  }, "\u2795 Add from text")), React.createElement("div", {
+    style: {
+      flex: "1 1 50%",
+      minWidth: 0
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.txt3,
+      fontWeight: 700,
+      textTransform: "uppercase",
+      letterSpacing: .5,
+      marginBottom: 6
+    }
+  }, "\u2026 or pick"), React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      flexWrap: "wrap",
+      alignItems: "center"
+    }
+  }, React.createElement("select", {
+    "aria-label": "Day I am free",
+    value: b,
+    onChange: function(W) {
+      y(W.target.value)
+    },
+    style: ye
+  }, ["Any", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Weekend", "Weekdays"].map(function(W) {
+    return React.createElement("option", {
+      key: W,
+      value: W
+    }, W === "Any" ? "Any day" : W)
+  })), React.createElement("input", {
+    type: "time",
+    value: S,
+    onChange: function(W) {
+      I(W.target.value)
+    },
+    style: ye
+  }), React.createElement("span", {
+    style: {
+      color: C.txt2,
+      fontSize: 13
+    }
+  }, "to"), React.createElement("input", {
+    type: "time",
+    value: R,
+    onChange: function(W) {
+      E(W.target.value)
+    },
+    style: ye
+  }), React.createElement("button", {
+    onClick: xe,
+    style: tt
+  }, "Add")))), React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.txt3,
+      fontWeight: 700,
+      textTransform: "uppercase",
+      letterSpacing: .5,
+      marginBottom: 8
+    }
+  }, "You're free (", Le.length, ")"), Le.length === 0 ? React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: C.txt3
+    }
+  }, "Nothing added yet.") : React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      flexWrap: "wrap"
+    }
+  }, Le.map(function(W) {
+    return React.createElement("span", {
+      key: W.i,
+      style: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "7px 12px",
+        borderRadius: 20,
+        background: "rgba(52,211,153,0.14)",
+        border: "1px solid rgba(52,211,153,0.4)",
+        color: "#34d399",
+        fontSize: 13,
+        fontWeight: 700
+      }
+    }, lt(W.w), React.createElement("button", {
+      onClick: function() {
+        n(function(te) {
+          return te.filter(function(q, ae) {
+            return ae !== W.i
+          })
+        })
+      },
+      style: {
+        background: "none",
+        border: "none",
+        color: "#34d399",
+        cursor: "pointer",
+        fontSize: 14,
+        lineHeight: 1
+      }
+    }, "\u2715"))
+  })), Le.length > 0 && React.createElement("button", {
+    onClick: function() {
+      n([])
+    },
+    style: {
+      marginTop: 12,
+      padding: "6px 12px",
+      borderRadius: 10,
+      border: "1px solid " + C.border,
+      background: "transparent",
+      color: C.txt3,
+      fontSize: 12,
+      fontWeight: 700,
+      cursor: "pointer"
+    }
+  }, "Clear all"), React.createElement("div", {style:{marginTop:22,borderTop:"1px solid "+C.border,paddingTop:16,display:"flex",gap:22,flexWrap:"wrap",alignItems:"flex-start"}}, React.createElement("div", {style:{flex:"1 1 300px",minWidth:0}}, React.createElement("div", {
+    style: {
+      fontSize: 16,
+      fontWeight: 900,
+      marginBottom: 8
+    }
+  }, "\u2728 Plan from wishlist"), React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 10,
+      flexWrap: "wrap",
+      alignItems: "center",
+      marginBottom: 12
+    }
+  }, React.createElement("label", {
+    style: {
+      fontSize: 12,
+      color: C.txt2,
+      fontWeight: 700,
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6
+    }
+  }, "Max \xA3", React.createElement("input", {
+    type: "number",
+    min: 0,
+    value: O,
+    onChange: function(W) {
+      M(W.target.value)
+    },
+    "aria-label": "Maximum ticket price",
+    placeholder: "any",
+    style: Object.assign({}, ye, {
+      width: 64,
+      padding: "6px 8px"
+    })
+  })), React.createElement("label", {
+    style: {
+      fontSize: 12,
+      color: C.txt2,
+      fontWeight: 700,
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6
+    }
+  }, "Max/day", React.createElement("input", {
+    type: "number",
+    min: 1,
+    value: x,
+    onChange: function(W) {
+      D(W.target.value)
+    },
+    style: Object.assign({}, ye, {
+      width: 52,
+      padding: "6px 8px"
+    })
+  })), React.createElement("label", {
+    style: {
+      fontSize: 12,
+      color: C.txt2,
+      fontWeight: 700,
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6,
+      cursor: "pointer"
+    }
+  }, React.createElement("input", {
+    type: "checkbox",
+    checked: v,
+    onChange: function(W) {
+      A(W.target.checked)
+    }
+  }), "Prefer evenings"), React.createElement("label", {
+    style: {
+      fontSize: 12,
+      color: C.txt2,
+      fontWeight: 700,
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6,
+      cursor: "pointer"
+    }
+  }, React.createElement("input", {
+    type: "checkbox",
+    checked: fe,
+    onChange: function(W) {
+      ue(W.target.checked)
+    }
+  }), "Prefer weekends")), React.createElement("button", {
+    onClick: at,
+    style: Object.assign({}, tt, {
+      padding: "10px 18px"
+    })
+  }, "\u2728 Plan my ", (o || []).length, " wishlisted show", (o || []).length === 1 ? "" : "s"), ee && function() {
+    var W = {};
+    ee.assigned.forEach(function(q) {
+      (W[q.date] = W[q.date] || []).push(q)
+    });
+    var te = Object.keys(W).sort();
+    return React.createElement("div", {
+      style: {
+        marginTop: 16
+      }
+    }, React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 10,
+        alignItems: "center",
+        flexWrap: "wrap",
+        marginBottom: 10
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 13,
+        fontWeight: 800,
+        color: ee.assigned.length ? "#34d399" : C.txt2
+      }
+    }, ee.assigned.length, " of ", ee.assigned.length + ee.unsched.length, " shows fit", t && t.length ? " your free windows" : "", "."), ee.assigned.length > 0 && (it ? React.createElement("span", {
+      role: "status",
+      "aria-live": "polite",
+      style: {
+        fontSize: 12,
+        fontWeight: 800,
+        color: "#34d399"
+      }
+    }, "\u2713 Added to Bookings") : React.createElement("button", {
+      onClick: function() {
+        s(ee.assigned), $e(!0)
+      },
+      style: {
+        padding: "7px 14px",
+        borderRadius: 10,
+        border: "none",
+        background: "rgba(96,165,250,0.22)",
+        color: "#93c5fd",
+        fontSize: 12,
+        fontWeight: 800,
+        cursor: "pointer"
+      }
+    }, "\u2795 Add these ", ee.assigned.length, " to my Bookings"))), te.map(function(q) {
+      var ae = W[q].map(function(Y) {
+        return Object.assign({}, Y.s, {
+          startStr: fmtMin_(Y.sm),
+          endStr: fmtMin_(Y.em)
+        })
+      });
+      return React.createElement("div", {
+        key: q,
+        style: {
+          marginBottom: 16
+        }
+      }, React.createElement("div", {
+        style: {
+          fontSize: 13,
+          fontWeight: 800,
+          margin: "0 2px 6px"
+        }
+      }, function() {
+        var Y = new Date(q + "T12:00:00");
+        return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][Y.getDay()] + " " + dateRange(q, q)
+      }()), React.createElement(TimedDay, {
+        items: ae,
+        onOpen: null
+      }))
+    }), ee.unsched.length > 0 && React.createElement("div", {
+      style: {
+        marginTop: 10
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 12,
+        color: C.txt3,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: .5,
+        marginBottom: 6
+      }
+    }, "Couldn't fit (", ee.unsched.length, ")"), ee.unsched.map(function(q, ae) {
+      return React.createElement("div", {
+        key: ae,
+        style: {
+          fontSize: 13,
+          color: C.txt2,
+          marginBottom: 3
+        }
+      }, "\u2022 ", React.createElement("b", {
+        style: {
+          color: C.txt
+        }
+      }, q.s.title), " \u2014 ", q.reason)
+    })), React.createElement("div", {
+      style: {
+        marginTop: 10,
+        fontSize: 11,
+        color: C.txt3
+      }
+    }, "These are suggested times from your wishlist \u2014 tap a block to view the show or open its edfringe listing, then book on edfringe.com."))
+  }()), React.createElement("div", {style:{flex:"1 1 300px",minWidth:0}}, React.createElement("div", {style:{fontSize:16,fontWeight:900,marginBottom:8}}, "🎯 Plan a set of shows"), React.createElement("div", {style:{fontSize:12,color:C.txt2,marginBottom:10,lineHeight:1.5}}, "Pick shows from the full programme, set your limits, and I’ll build the best day."), React.createElement("input", {value:pickQ, onChange:function(e){setPickQ(e.target.value);}, placeholder:"Search shows to add…", "aria-label":"Search shows to add", style:{width:"100%",boxSizing:"border-box",padding:"8px 10px",borderRadius:10,border:"1px solid "+C.border,background:"rgba(255,255,255,0.06)",color:C.txt,fontSize:13,outline:"none",marginBottom:6}}), pickQ.trim() && React.createElement("div", {style:{maxHeight:180,overflowY:"auto",border:"1px solid "+C.border,borderRadius:10,marginBottom:8}}, (cat||[]).filter(function(sh){var q=pickQ.trim().toLowerCase();return (sh.title||"").toLowerCase().indexOf(q)>=0||(sh.venue||"").toLowerCase().indexOf(q)>=0;}).slice(0,40).map(function(sh){var inP=pickedCodes.has(sh.code);return React.createElement("div", {key:sh.code, onClick:function(){setPicked(function(pc){var s2=new Set(pc); s2.has(sh.code)?s2.delete(sh.code):s2.add(sh.code); return s2;});}, style:{display:"flex",alignItems:"center",gap:8,padding:"7px 9px",borderBottom:"1px solid "+C.border,cursor:"pointer",background:inP?"rgba(52,211,153,0.12)":"transparent"}}, React.createElement("span", {style:{width:14,textAlign:"center",color:inP?"#34d399":C.accent,fontWeight:800,flexShrink:0}}, inP?"✓":"+"), React.createElement("span", {style:{flex:1,minWidth:0,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}, (sh.startStr?sh.startStr+" · ":"")+(sh.title||"")), sh.priceFull?React.createElement("span", {style:{fontSize:12,fontWeight:800,flexShrink:0}}, (typeof sh.priceFull==="number"?"£"+sh.priceFull:sh.priceFull)):null);})), pickedCodes.size>0 && React.createElement("div", {style:{display:"flex",gap:5,flexWrap:"wrap",marginBottom:10}}, Array.from(pickedCodes).map(function(cd){var sh=(cat||[]).find(function(x){return x.code===cd;}); return React.createElement("span", {key:cd, style:{display:"inline-flex",alignItems:"center",gap:5,background:"rgba(168,85,247,0.15)",color:"#c084fc",padding:"3px 6px 3px 9px",borderRadius:14,fontSize:11,fontWeight:700}}, (sh&&sh.title)||cd, React.createElement("span", {onClick:function(){setPicked(function(pc){var s2=new Set(pc);s2.delete(cd);return s2;});}, style:{cursor:"pointer"}}, "✕"));})), React.createElement("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}, mkLbl("Max day cost £", React.createElement("input", {type:"number",min:0,value:maxCost,onChange:function(e){setMaxCost(e.target.value);},placeholder:"any",style:numStyle})), mkLbl("Max shows/day", React.createElement("input", {type:"number",min:1,value:maxPer,onChange:function(e){setMaxPer(e.target.value);},style:numStyle})), mkLbl("Break between (min)", React.createElement("input", {type:"number",min:0,value:breakMin,onChange:function(e){setBreakMin(e.target.value);},style:numStyle})), mkLbl("Max walk between (min)", React.createElement("input", {type:"number",min:0,value:walkMax,onChange:function(e){setWalkMax(e.target.value);},style:numStyle}))), React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:7,marginBottom:12}}, mkChk("Evenings preferred", prefEve, function(){setPrefEve(function(v2){return !v2;});}), mkChk("Weekends preferred", prefWk, function(){setPrefWk(function(v2){return !v2;});}), mkChk("Keep venues close together", venClose, function(){setVenClose(function(v2){return !v2;});})), React.createElement("button", {disabled:pickedCodes.size===0, onClick:function(){setPlannedSet(planSet_((cat||[]).filter(function(s){return pickedCodes.has(s.code);}), {maxCost:maxCost,maxPer:maxPer,breakMin:breakMin,walkMax:walkMax,prefEve:prefEve,prefWk:prefWk,venClose:venClose}));}, style:{width:"100%",padding:"11px",borderRadius:12,border:"none",background:pickedCodes.size?C.accent:"rgba(168,85,247,0.3)",color:"#fff",fontSize:14,fontWeight:800,cursor:pickedCodes.size?"pointer":"not-allowed"}}, "Plan my day (" + pickedCodes.size + " show" + (pickedCodes.size===1?"":"s") + ")"), plannedSet && React.createElement("div", {style:{marginTop:14,borderTop:"1px solid "+C.border,paddingTop:12}}, plannedSet.sched.length ? React.createElement("div", null, React.createElement("div", {style:{fontSize:13,fontWeight:800,marginBottom:8,color:C.txt}}, "Your day" + (plannedSet.date?" \u2014 "+(function(){var dt=new Date(plannedSet.date+"T12:00:00");var DN=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],MN=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];return isNaN(dt.getTime())?plannedSet.date:DN[dt.getDay()]+" "+dt.getDate()+" "+MN[dt.getMonth()];})():"") + " \u00b7 " + plannedSet.sched.length + " show" + (plannedSet.sched.length===1?"":"s") + " \u00b7 \u00a3" + plannedSet.cost.toFixed(2)), plannedSet.sched.map(function(s){return React.createElement("div", {key:s.code, style:{display:"flex",gap:8,padding:"6px 0",borderBottom:"1px solid "+C.border,fontSize:12,alignItems:"baseline"}}, React.createElement("span",{style:{color:C.accent,fontWeight:800,flexShrink:0,minWidth:46}}, s.startStr||"\u2014"), React.createElement("span",{style:{flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}, s.title), React.createElement("span",{style:{color:C.txt3,flexShrink:0,fontSize:11}}, s.venue||""));})) : React.createElement("div", {style:{fontSize:13,color:"#fca5a5"}}, "Couldn\u2019t fit any of these into one day with those limits \u2014 try loosening them."), (plannedSet.unfit && plannedSet.unfit.length) ? React.createElement("div", {style:{marginTop:10}}, React.createElement("div", {style:{fontSize:11,fontWeight:800,color:C.txt3,textTransform:"uppercase",letterSpacing:0.5,marginBottom:5}}, "Couldn\u2019t fit"), plannedSet.unfit.map(function(u,i){return React.createElement("div", {key:i, style:{fontSize:11,color:C.txt2,marginBottom:3,lineHeight:1.4}}, "\u2022 " + (u.show.title||u.show.code) + " \u2014 " + u.reason);})) : null))))
+}
+
+function mapsUrl(t) {
+  if (t.lat != null && !isNaN(t.lat) && t.lng != null && !isNaN(t.lng)) return "https://www.google.com/maps/search/?api=1&query=" + t.lat + "," + t.lng;
+  var n = [t.venue, t.venueAddr, t.venuePostcode].filter(Boolean).join(", ");
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(n)
+}
+
+function Detail({
+  s: t,
+  inPlan: n,
+  isBk: o,
+  note: a,
+  onNote: s,
+  onToggle: d,
+  onBook: w,
+  wdate: p,
+  onWDate: h,
+  onClose: b,
+  proposals: y,
+  onAddToProp: g
+}) {
+  return t ? React.createElement("div", {
+    onClick: b,
+    onKeyDown: function(S) {
+      S.key === "Escape" && b()
+    },
+    tabIndex: -1,
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.65)",
+      zIndex: 1e3,
+      display: "flex",
+      alignItems: "flex-start",
+      justifyContent: "center",
+      overflowY: "auto",
+      padding: "30px 12px"
+    }
+  }, React.createElement("div", {
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "Show details",
+    onClick: S => S.stopPropagation(),
+    style: {
+      background: C.card,
+      border: "1px solid " + C.border,
+      borderRadius: 16,
+      maxWidth: 560,
+      width: "100%",
+      padding: "20px 20px 24px",
+      position: "relative"
+    }
+  }, React.createElement("button", {
+    onClick: b,
+    "aria-label": "Close",
+    style: {
+      position: "absolute",
+      top: 12,
+      right: 12,
+      background: "none",
+      border: "none",
+      color: C.txt2,
+      fontSize: 22,
+      cursor: "pointer"
+    }
+  }, "\u2715"), React.createElement("div", {
+    style: {
+      fontSize: 22,
+      fontWeight: 900,
+      paddingRight: 24,
+      lineHeight: 1.2
+    }
+  }, t.title), t.subtitle && React.createElement("div", {
+    style: {
+      fontSize: 14,
+      color: C.txt2,
+      marginTop: 2
+    }
+  }, t.subtitle), t.artist && React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: C.txt3,
+      marginTop: 4
+    }
+  }, t.artist, t.country ? " \xB7 " + t.country : ""), React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6,
+      flexWrap: "wrap",
+      margin: "12px 0"
+    }
+  }, t.genre && React.createElement(Tag, {
+    color: gcolor(t.genre)
+  }, t.genre), t.tags.map((S, I) => React.createElement(Tag, {
+    key: I
+  }, S))), React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 10,
+      margin: "6px 0 14px"
+    }
+  }, React.createElement(Info, {
+    label: "Dates",
+    value: dateRange(t.first, t.last)
+  }), React.createElement(Info, {
+    label: "Time",
+    value: t.startStr === "Various times" ? "Various" : t.startStr ? t.startStr + (t.endStr ? "\u2013" + t.endStr : "") : "\u2014"
+  }), React.createElement(Info, {
+    label: "Duration",
+    value: t.duration ? t.duration + " min" : "\u2014"
+  }), React.createElement(Info, {
+    label: "Full price",
+    value: priceLabel(t.priceFull) || "\u2014"
+  }), React.createElement(Info, {
+    label: "Concession",
+    value: priceLabel(t.priceConc) || "\u2014"
+  }), React.createElement(Info, {
+    label: "Age",
+    value: t.age || "\u2014"
+  }), React.createElement(Info, {
+    label: "Performances",
+    value: t.perfs || "\u2014"
+  })), t.venue && React.createElement("a", {
+    href: mapsUrl(t),
+    target: "_blank",
+    rel: "noopener noreferrer",
+    "aria-label": t.venue + " on Google Maps (opens in a new tab)",
+    style: {
+      display: "block",
+      fontSize: 14,
+      fontWeight: 700,
+      color: C.accent,
+      textDecoration: "none",
+      marginBottom: 10
+    }
+  }, "\u{1F4CD} ", t.venue, t.venueCode ? " (#" + t.venueCode + ")" : "", t.venueAddr || t.venuePostcode ? ", " + [t.venueAddr, t.venuePostcode].filter(Boolean).join(", ") : "", " \u2197"), t.description && React.createElement("div", {
+    style: {
+      fontSize: 14,
+      color: C.txt2,
+      lineHeight: 1.55,
+      maxHeight: 180,
+      overflow: "auto",
+      marginBottom: 12
+    }
+  }, t.description), t.warnings && t.warnings !== "None" && React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: "#fca5a5",
+      background: "rgba(239,68,68,0.1)",
+      border: "1px solid rgba(239,68,68,0.3)",
+      borderRadius: 10,
+      padding: "8px 12px",
+      marginBottom: 12
+    }
+  }, "\u26A0 ", t.warnings), React.createElement("div", {
+    style: {
+      marginBottom: 14
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: C.txt3,
+      fontWeight: 700,
+      textTransform: "uppercase",
+      letterSpacing: .5,
+      marginBottom: 5
+    }
+  }, "My notes"), React.createElement("textarea", {
+    value: a || "",
+    onChange: S => s(t.code, S.target.value),
+    "aria-label": "Private note for this show",
+    placeholder: "Add a private note (only on this device)\u2026",
+    rows: 2,
+    style: {
+      width: "100%",
+      boxSizing: "border-box",
+      padding: "9px 12px",
+      borderRadius: 10,
+      border: "1px solid " + C.border,
+      background: "rgba(255,255,255,0.06)",
+      color: C.txt,
+      fontSize: 13,
+      outline: "none",
+      resize: "vertical",
+      fontFamily: "inherit"
+    }
+  })), React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      alignItems: "center"
+    }
+  }, React.createElement("button", {
+    onClick: d,
+    "aria-label": n ? "Remove " + (t.title || "this show") + " from your wishlist" : "Add " + (t.title || "this show") + " to your wishlist",
+    title: n ? "On your wishlist" : "Add to wishlist",
+    style: {
+      width: 44,
+      height: 44,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 11,
+      border: "1px solid " + (n ? "#34d399" : C.border),
+      background: n ? "rgba(52,211,153,0.16)" : "transparent",
+      color: n ? "#34d399" : C.txt2,
+      fontSize: 20,
+      cursor: "pointer"
+    }
+  }, n ? "\u2665" : "\u2661"), w && React.createElement("button", {
+    onClick: () => w(t),
+    "aria-label": o ? "Edit booking for " + (t.title || "this show") : "Mark " + (t.title || "this show") + " as booked",
+    title: o ? "Booked \u2014 tap to edit" : "Mark as booked",
+    style: {
+      width: 44,
+      height: 44,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 11,
+      border: "1px solid " + (o ? "#93c5fd" : C.border),
+      background: o ? "rgba(96,165,250,0.18)" : "transparent",
+      color: o ? "#93c5fd" : C.txt2,
+      fontSize: 18,
+      cursor: "pointer"
+    }
+  }, "\u{1F39F}"), g && React.createElement("select", {
+    value: "",
+    onChange: S => {
+      S.target.value && g(S.target.value, t.code)
+    },
+    "aria-label": "Add to a proposal",
+    title: "Add to a proposal",
+    style: {
+      width: 44,
+      height: 44,
+      padding: 0,
+      borderRadius: 11,
+      border: "1px solid " + C.border,
+      background: "transparent",
+      color: C.txt2,
+      fontSize: 18,
+      fontWeight: 700,
+      colorScheme: "dark",
+      cursor: "pointer",
+      textAlign: "center",
+      textAlignLast: "center",
+      appearance: "none",
+      WebkitAppearance: "none",
+      MozAppearance: "none"
+    }
+  }, React.createElement("option", {
+    value: ""
+  }, "\u{1F4CB}"), (y || []).map(S => React.createElement("option", {
+    key: S.id,
+    value: S.id
+  }, S.title || "Untitled")), React.createElement("option", {
+    value: "__new"
+  }, "\uFF0B New proposal")), t.website && React.createElement("a", {
+    href: t.website,
+    target: "_blank",
+    rel: "noopener noreferrer",
+    title: "View on edfringe.com (opens in a new tab)",
+    "aria-label": "View " + (t.title || "this show") + " on edfringe.com (opens in a new tab)",
+    style: {
+      width: 44,
+      height: 44,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 11,
+      border: "1px solid " + C.border,
+      color: C.txt2,
+      textDecoration: "none"
+    }
+  }, React.createElement(LinkIcon, null))), n && h && React.createElement("div", {
+    style: {
+      marginTop: 12,
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      flexWrap: "wrap"
+    }
+  }, React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: C.txt2,
+      fontWeight: 700
+    }
+  }, "Preferred date (shows on your calendar):"), React.createElement("input", {
+    type: "date",
+    value: p || "",
+    min: t.first || void 0,
+    max: t.last || void 0,
+    onChange: S => h(t.code, S.target.value),
+    style: {
+      padding: "7px 10px",
+      borderRadius: 10,
+      border: "1px solid " + C.border,
+      background: "rgba(255,255,255,0.06)",
+      color: C.txt,
+      fontSize: 13,
+      colorScheme: "dark"
+    }
+  })))) : null
+}
+
+function BookModal({
+  s: t,
+  onConfirm: n,
+  onClose: o
+}) {
+  const a = /^\d{1,2}:\d{2}$/.test(t.startStr || ""),
+    [s, d] = React.useState(t.first || ""),
+    [w, p] = React.useState(a ? t.startStr : ""),
+    [h, b] = React.useState(a && t.endStr || ""),
+    y = {
+      boxSizing: "border-box",
+      padding: "9px 11px",
+      borderRadius: 10,
+      border: "1px solid " + C.border,
+      background: "rgba(255,255,255,0.06)",
+      color: C.txt,
+      fontSize: 14,
+      outline: "none",
+      colorScheme: "dark"
+    };
+  return React.createElement("div", {
+    onClick: o,
+    onKeyDown: function(g) {
+      g.key === "Escape" && o()
+    },
+    tabIndex: -1,
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.65)",
+      zIndex: 1200,
+      display: "flex",
+      alignItems: "flex-start",
+      justifyContent: "center",
+      padding: "40px 12px"
+    }
+  }, React.createElement("div", {
+    role: "dialog",
+    "aria-modal": "true",
+    "aria-label": "Confirm booking",
+    onClick: g => g.stopPropagation(),
+    style: {
+      background: C.card,
+      border: "1px solid " + C.border,
+      borderRadius: 16,
+      maxWidth: 420,
+      width: "100%",
+      padding: "20px"
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 17,
+      fontWeight: 900
+    }
+  }, "Confirm booking \u{1F39F}"), React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: C.txt2,
+      margin: "3px 0 14px"
+    }
+  }, t.title), React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.txt3,
+      fontWeight: 700,
+      marginBottom: 4
+    }
+  }, "Date you booked"), React.createElement("input", {
+    type: "date",
+    value: s,
+    min: t.first || void 0,
+    max: t.last || void 0,
+    onChange: g => d(g.target.value),
+    style: {
+      ...y,
+      width: "100%",
+      boxSizing: "border-box",
+      maxWidth: "100%",
+      marginBottom: 12
+    }
+  }), !a && React.createElement(React.Fragment, null, React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.txt3,
+      marginBottom: 6
+    }
+  }, "This show has various times \u2014 enter your slot:"), React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      marginBottom: 12
+    }
+  }, React.createElement("input", {
+    type: "time",
+    value: w,
+    onChange: g => p(g.target.value),
+    style: {
+      ...y,
+      flex: 1,
+      minWidth: 0,
+      boxSizing: "border-box"
+    }
+  }), React.createElement("input", {
+    type: "time",
+    value: h,
+    onChange: g => b(g.target.value),
+    style: {
+      ...y,
+      flex: 1,
+      minWidth: 0,
+      boxSizing: "border-box"
+    }
+  }))), React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      justifyContent: "flex-end"
+    }
+  }, React.createElement("button", {
+    onClick: o,
+    style: {
+      padding: "9px 14px",
+      borderRadius: 10,
+      border: "1px solid " + C.border,
+      background: "transparent",
+      color: C.txt2,
+      fontWeight: 700,
+      cursor: "pointer",
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6
+    }
+  }, "\u2715 Cancel"), React.createElement("button", {
+    onClick: () => {
+      s && n(t.code, {
+        date: s,
+        start: a ? t.startStr : w,
+        end: a ? t.endStr || "" : h
+      })
+    },
+    style: {
+      padding: "9px 16px",
+      borderRadius: 10,
+      border: "none",
+      background: C.accent,
+      color: "#fff",
+      fontWeight: 800,
+      cursor: "pointer",
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6
+    }
+  }, "\u{1F3AB} Confirm"))))
+}
+
+function icsStamp_(t, n) {
+  var o = String(t || "").replace(/-/g, ""),
+    a = String(n || "00:00").replace(":", "") + "00";
+  return o + "T" + a
+}
+
+function bookEnd_(t, n) {
+  var o = t.start || n.startStr || "00:00",
+    a = t.end || n.endStr || "",
+    s = t.date;
+  if (a) {
+    var h = timeToMin_(o),
+      b = timeToMin_(a);
+    if (h != null && b != null && b < h) {
+      var y = new Date(s + "T12:00:00");
+      y.setDate(y.getDate() + 1), s = y.toISOString().slice(0, 10)
+    }
+  } else {
+    var d = timeToMin_(o) || 0,
+      w = d + (n.duration || 60);
+    if (w >= 1440) {
+      var p = new Date(s + "T12:00:00");
+      p.setDate(p.getDate() + 1), s = p.toISOString().slice(0, 10), w -= 1440
+    }
+    a = ("0" + Math.floor(w / 60)).slice(-2) + ":" + ("0" + w % 60).slice(-2)
+  }
+  return {
+    date: s,
+    time: a
+  }
+}
+
+function icsForBooking_(t, n) {
+  var o = n.start || t.startStr || "00:00",
+    a = bookEnd_(n, t),
+    s = function(h) {
+      return String(h || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n")
+    },
+    d = (t.code + n.date + o).replace(/[^a-z0-9]+/gi, "-") + "@fringe-public",
+    w = [t.venue, t.venueAddr, t.venuePostcode].filter(Boolean).join(", "),
+    p = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//fringe-public//EN", "CALSCALE:GREGORIAN", "BEGIN:VEVENT", "UID:" + d, "DTSTAMP:" + icsStamp_(n.date, o), "DTSTART:" + icsStamp_(n.date, o), "DTEND:" + icsStamp_(a.date, a.time), "SUMMARY:" + s(t.title + (t.venue ? " | " + t.venue : "")), w ? "LOCATION:" + s(w) : "", t.website ? "URL:" + s(t.website) : "", "DESCRIPTION:" + s(priceLabel(t.priceFull) || ""), "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:Reminder", "TRIGGER:-PT1H", "END:VALARM", "END:VEVENT", "END:VCALENDAR"].filter(Boolean);
+  return p.join(`\r
+`)
+}
+
+function downloadICS_(t, n) {
+  try {
+    var o = new Blob([icsForBooking_(t, n)], {
+        type: "text/calendar;charset=utf-8"
+      }),
+      a = URL.createObjectURL(o),
+      s = document.createElement("a");
+    s.href = a, s.download = (t.title || "show").replace(/[^a-z0-9]+/gi, "-").toLowerCase().replace(/^-|-$/g, "") + ".ics", document.body.appendChild(s), s.click(), document.body.removeChild(s), setTimeout(function() {
+      URL.revokeObjectURL(a)
+    }, 1500)
+  } catch {}
+}
+
+function veventFor_(t, n, o) {
+  var a = n.start || t.startStr || "00:00",
+    s = bookEnd_(n, t),
+    d = function(b) {
+      return String(b || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n")
+    },
+    w = (t.code + n.date + a + o).replace(/[^a-z0-9]+/gi, "-") + "@fringe-public",
+    p = [t.venue, t.venueAddr, t.venuePostcode].filter(Boolean).join(", "),
+    h = o === "TENTATIVE";
+  return ["BEGIN:VEVENT", "UID:" + w, "DTSTAMP:" + icsStamp_(n.date, a), "DTSTART:" + icsStamp_(n.date, a), "DTEND:" + icsStamp_(s.date, s.time), "SUMMARY:" + d((h ? "[Maybe] " : "") + t.title + (t.venue ? " | " + t.venue : "")), p ? "LOCATION:" + d(p) : "", t.website ? "URL:" + d(t.website) : "", "STATUS:" + o, "DESCRIPTION:" + d((h ? "Wishlist \u2014 not yet booked. " : "") + (priceLabel(t.priceFull) || "")), "END:VEVENT"].filter(Boolean)
+}
+
+function exportAllICS_(t, n, o) {
+  var a = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//fringe-public//EN", "CALSCALE:GREGORIAN"];
+  return Object.keys(n || {}).forEach(function(s) {
+    var d = t[s],
+      w = n[s];
+    d && w && w.date && (a = a.concat(veventFor_(d, w, "CONFIRMED")))
+  }), Object.keys(o || {}).forEach(function(s) {
+    if (!(n && n[s])) {
+      var d = t[s],
+        w = o && o[s];
+      d && w && (a = a.concat(veventFor_(d, {
+        date: w,
+        start: d.startStr,
+        end: d.endStr
+      }, "TENTATIVE")))
+    }
+  }), a.push("END:VCALENDAR"), a.join(`\r
+`)
+}
+
+function downloadAllICS_(t, n, o) {
+  try {
+    var a = new Blob([exportAllICS_(t, n, o)], {
+        type: "text/calendar;charset=utf-8"
+      }),
+      s = URL.createObjectURL(a),
+      d = document.createElement("a");
+    d.href = s, d.download = "my-fringe-plan.ics", document.body.appendChild(d), d.click(), document.body.removeChild(d), setTimeout(function() {
+      URL.revokeObjectURL(s)
+    }, 1500)
+  } catch {}
+}
+
+function gcalUrl_(t, n) {
+  var o = n.start || t.startStr || "00:00",
+    a = bookEnd_(n, t),
+    s = [t.venue, t.venueAddr, t.venuePostcode].filter(Boolean).join(", "),
+    d = new URLSearchParams({
+      action: "TEMPLATE",
+      text: t.title + (t.venue ? " | " + t.venue : ""),
+      dates: icsStamp_(n.date, o) + "/" + icsStamp_(a.date, a.time),
+      location: s,
+      details: t.website || "",
+      ctz: "Europe/London"
+    });
+  return "https://calendar.google.com/calendar/render?" + d.toString()
+}
+
+function Info({
+  label: t,
+  value: n
+}) {
+  return React.createElement("div", null, React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: C.txt3,
+      fontWeight: 700,
+      textTransform: "uppercase",
+      letterSpacing: .5
+    }
+  }, t), React.createElement("div", {
+    style: {
+      fontSize: 14,
+      color: C.txt,
+      marginTop: 2
+    }
+  }, n))
+}
+
+function MapView({
+  shows: t,
+  isMobile: n
+}) {
+  const o = useRef(null),
+    a = useRef(null),
+    s = useRef(null);
+  return useEffect(() => {
+    let d = !1;
+    return loadLeaflet().then(w => {
+      if (d || !o.current) return;
+      if (a.current && a.current.getContainer() !== o.current) {
+        try {
+          a.current.remove()
+        } catch {}
+        a.current = null
+      }
+      a.current || (a.current = w.map(o.current, {
+        scrollWheelZoom: !0
+      }).setView([55.9505, -3.19], 13), w.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap"
+      }).addTo(a.current), s.current = w.layerGroup().addTo(a.current)), s.current.clearLayers();
+      const p = {},
+        h = y => String(y || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      t.forEach(y => {
+        if (isNaN(y.lat) || isNaN(y.lng)) return;
+        const g = y.venueCode || y.venue;
+        (p[g] = p[g] || {
+          lat: y.lat,
+          lng: y.lng,
+          name: y.venue,
+          shows: []
+        }).shows.push(y)
+      });
+      const b = [];
+      Object.keys(p).forEach(y => {
+        const g = p[y],
+          S = w.circleMarker([g.lat, g.lng], {
+            radius: 9,
+            color: "#fff",
+            weight: 1.5,
+            fillColor: C.accent,
+            fillOpacity: .9
+          }).addTo(s.current),
+          I = g.shows.slice(0, 12).map(f => "\u2022 " + h(f.title)).join("<br>");
+        S.bindPopup("<b>" + h(g.name) + "</b><br>" + I), b.push([g.lat, g.lng])
+      }), b.length && a.current.fitBounds(b, {
+        padding: [35, 35],
+        maxZoom: 15
+      }), setTimeout(() => {
+        try {
+          a.current && a.current.invalidateSize()
+        } catch {}
+      }, 150)
+    }).catch(() => {}), () => {
+      d = !0
+    }
+  }, [t]), React.createElement("div", {
+    ref: o,
+    style: {
+      height: n ? "calc(100vh - 320px)" : "calc(100vh - 250px)",
+      minHeight: 300,
+      margin: n ? "8px 0 18px" : "0",
+      borderRadius: 14,
+      overflow: "hidden",
+      border: "1px solid " + C.border,
+      background: "#0e0e1c",
+      position: "relative",
+      zIndex: 0,
+      isolation: "isolate"
+    }
+  })
+}
+
+function MultiPick({
+  label: t,
+  options: n,
+  selected: o,
+  onToggle: a,
+  onClear: s,
+  box: d,
+  fmt: w,
+  column: p
+}) {
+  const [h, b] = useState(!1), [y, g] = useState(""), S = useRef(null), [I, f] = useState({
+    up: !1,
+    max: 300
+  }), R = function() {
+    b(function(O) {
+      return O ? !1 : (requestAnimationFrame(function() {
+        var M = S.current;
+        if (M) {
+          var K = M.getBoundingClientRect(),
+            x = M.closest("[data-sheetscroll]"),
+            D = x ? x.getBoundingClientRect().top : 0,
+            J = x ? x.getBoundingClientRect().bottom : typeof window < "u" ? window.innerHeight : 800,
+            v = J - K.bottom - 12,
+            A = K.top - D - 12,
+            _ = v < 200 && A > v;
+          f({
+            up: _,
+            max: Math.max(140, Math.min(320, _ ? A : v))
+          })
+        }
+      }), !0)
+    })
+  }, E = o || new Set, U = (n || []).filter(function(O) {
+    return y ? String(w ? w(O) : O).toLowerCase().indexOf(y.toLowerCase()) >= 0 : !0
+  }).slice(0, 300);
+  return React.createElement("div", {
+    ref: S,
+    style: {
+      position: "relative",
+      width: d && d.width ? d.width : void 0,
+      minWidth: 0
+    }
+  }, React.createElement("button", {
+    onClick: R,
+    style: Object.assign({}, d, {
+      cursor: "pointer",
+      textAlign: "left",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 6
+    })
+  }, React.createElement("span", {
+    style: {
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, t, E.size ? " (" + E.size + ")" : ""), React.createElement("span", {
+    style: {
+      fontSize: 10,
+      opacity: .6,
+      flexShrink: 0
+    }
+  }, "\u25BE")), h && React.createElement("div", {
+    style: {
+      position: "absolute",
+      zIndex: 90,
+      top: I.up ? void 0 : "100%",
+      bottom: I.up ? "100%" : void 0,
+      left: 0,
+      right: 0,
+      marginTop: I.up ? 0 : 4,
+      marginBottom: I.up ? 4 : 0,
+      background: C.card,
+      border: "1px solid " + C.border,
+      borderRadius: 10,
+      boxShadow: "0 10px 28px rgba(0,0,0,0.55)",
+      maxHeight: I.max,
+      overflowY: "auto",
+      padding: 8,
+      minWidth: 210
+    }
+  }, React.createElement("input", {
+    value: y,
+    onChange: function(O) {
+      g(O.target.value)
+    },
+    "aria-label": "Filter these options",
+    placeholder: "Filter\u2026",
+    style: Object.assign({}, d, {
+      width: "100%",
+      boxSizing: "border-box",
+      marginBottom: 6,
+      fontSize: 13,
+      padding: "6px 9px"
+    })
+  }), E.size > 0 && React.createElement("button", {
+    onClick: s,
+    style: {
+      width: "100%",
+      marginBottom: 6,
+      padding: "5px",
+      borderRadius: 8,
+      border: "1px solid " + C.border,
+      background: "transparent",
+      color: C.txt2,
+      fontSize: 12,
+      cursor: "pointer"
+    }
+  }, "Clear selection (", E.size, ")"), U.map(function(O) {
+    return React.createElement("label", {
+      key: O,
+      style: {
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 8,
+        padding: "5px 2px",
+        fontSize: 13,
+        color: C.txt,
+        cursor: "pointer"
+      }
+    }, React.createElement("input", {
+      type: "checkbox",
+      checked: E.has(O),
+      onChange: function() {
+        a(O)
+      },
+      style: {
+        marginTop: 2,
+        flexShrink: 0
+      }
+    }), React.createElement("span", {
+      style: {
+        whiteSpace: "normal",
+        wordBreak: "break-word",
+        lineHeight: 1.3
+      }
+    }, w ? w(O) : O))
+  }), U.length === 0 && React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: C.txt3,
+      padding: 6
+    }
+  }, "No matches")))
+}
+
+function FilterControls({
+  q: t,
+  setQ: n,
+  genre: o,
+  setGenre: a,
+  age: s,
+  setAge: d,
+  access: w,
+  setAccess: p,
+  accessOpts: h,
+  onDate: b,
+  setOnDate: y,
+  pickedDates: g,
+  addPickedDate: S,
+  removePickedDate: I,
+  pmin: f,
+  setPmin: R,
+  pmax: E,
+  setPmax: U,
+  priceCeil: O,
+  genres: M,
+  ages: K,
+  venueSel: x,
+  toggleVenue: D,
+  clearVenues: J,
+  venueNoSel: v,
+  toggleVenueNo: A,
+  clearVenueNos: _,
+  atype: fe,
+  setAtype: ue,
+  country: Re,
+  setCountry: ee,
+  durMax: ct,
+  setDurMax: Qe,
+  startTod: it,
+  setStartTod: $e,
+  dFrom: at,
+  setDFrom: se,
+  dTo: et,
+  setDTo: X,
+  venues: xe,
+  venueFmt: lt,
+  venueNos: Le,
+  atypes: ye,
+  countries: tt,
+  smart: W,
+  setSmart: te,
+  onClear: q,
+  active: ae,
+  column: Y,
+  simple: ut
+}) {
+  const ne = {
+      padding: "9px 12px",
+      borderRadius: 12,
+      border: "1px solid " + C.border,
+      background: "rgba(255,255,255,0.06)",
+      color: C.txt,
+      fontSize: 14,
+      colorScheme: "dark",
+      width: Y ? "100%" : void 0,
+      minWidth: 0,
+      boxSizing: "border-box"
+    },
+    pt = Y ? {
+      gridColumn: "1 / -1"
+    } : {},
+    Te = f ?? 0,
+    Oe = E ?? O;
+  return React.createElement("div", {
+    style: Y ? {
+      display: "grid",
+      gridTemplateColumns: "repeat(3,minmax(0,1fr))",
+      gap: 8,
+      alignItems: "end"
+    } : {
+      display: "flex",
+      gap: 8,
+      flexWrap: "wrap",
+      alignItems: "center",
+      justifyContent: "center"
+    }
+  }, React.createElement("input", {
+    value: t,
+    onChange: k => n(k.target.value),
+    "aria-label": "Search shows, artists and venues",
+    placeholder: "\u{1F50D} Search shows, artists, venues\u2026",
+    style: {
+      ...ne,
+      outline: "none",
+      width: Y ? "100%" : 260,
+      ...pt
+    }
+  }), !ut && React.createElement(React.Fragment, null, React.createElement("select", {
+    "aria-label": "Smart picks",
+    value: W,
+    onChange: k => te(k.target.value),
+    title: "Smart picks",
+    style: {
+      ...ne,
+      fontWeight: 700,
+      ...pt
+    }
+  }, React.createElement("option", {
+    value: ""
+  }, "\u2728 Smart picks\u2026"), React.createElement("option", {
+    value: "short"
+  }, "\u{1F4C6} Short runs (\u22644 days)"), React.createElement("option", {
+    value: "quiet"
+  }, "\u{1F92B} Quietest venues"), React.createElement("option", {
+    value: "expensive"
+  }, "\u{1F4B0} Priciest"), React.createElement("option", {
+    value: "free"
+  }, "\u{1F193} Free"), React.createElement("option", {
+    value: "cheap"
+  }, "\u{1FA99} Cheapest"), React.createElement("option", {
+    value: "big"
+  }, "\u{1F465} Big casts"), React.createElement("option", {
+    value: "longest"
+  }, "\u23F3 Longest"), React.createElement("option", {
+    value: "shortest"
+  }, "\u26A1 Shortest"), React.createElement("option", {
+    value: "rare"
+  }, "\u{1F48E} Rarest genre"), React.createElement("option", {
+    value: "pop"
+  }, "\u{1F525} Most popular genre")), React.createElement("select", {
+    "aria-label": "Genre",
+    value: o,
+    onChange: k => a(k.target.value),
+    style: ne
+  }, React.createElement("option", {
+    value: ""
+  }, "\u{1F3AB} All genres"), M.map(k => React.createElement("option", {
+    key: k,
+    value: k
+  }, k))), React.createElement("select", {
+    "aria-label": "Age rating",
+    value: s,
+    onChange: k => d(k.target.value),
+    style: ne
+  }, React.createElement("option", {
+    value: ""
+  }, "\u{1F51E} Any age"), K.map(k => React.createElement("option", {
+    key: k,
+    value: k
+  }, "Suitable ", k))), React.createElement("select", {
+    "aria-label": "Accessibility need",
+    value: w,
+    onChange: k => p(k.target.value),
+    style: ne
+  }, React.createElement("option", {
+    value: ""
+  }, "\u267F Accessibility"), h.map(k => React.createElement("option", {
+    key: k,
+    value: k
+  }, k))), React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 4,
+      minWidth: 0
+    }
+  }, React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: C.txt2,
+      fontWeight: 700
+    }
+  }, "\u{1F4C5} On date(s)"), React.createElement("input", {
+    type: "date",
+    value: "",
+    onClick: function(k) {
+      try {
+        k.currentTarget.showPicker()
+      } catch {}
+    },
+    onFocus: function(k) {
+      try {
+        k.currentTarget.showPicker()
+      } catch {}
+    },
+    onChange: function(k) {
+      k.target.value && S(k.target.value)
+    },
+    "aria-label": "Add a date to filter by (pick several)",
+    title: "Open the date picker (add several dates)",
+    style: Object.assign({}, ne, {
+      cursor: "pointer"
+    })
+  }), g.size > 0 && React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 5,
+      flexWrap: "wrap",
+      marginTop: 2
+    }
+  }, [...g].sort().map(function(k) {
+    var G = new Date(k + "T12:00:00"),
+      yt = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+      ft = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return React.createElement("span", {
+      key: k,
+      style: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        fontSize: 11,
+        fontWeight: 700,
+        background: "rgba(168,85,247,0.18)",
+        color: "#c084fc",
+        borderRadius: 20,
+        padding: "3px 5px 3px 10px"
+      }
+    }, yt[G.getDay()] + " " + G.getDate() + " " + ft[G.getMonth()], React.createElement("button", {
+      onClick: function() {
+        I(k)
+      },
+      "aria-label": "Remove " + k,
+      title: "Remove",
+      style: {
+        background: "none",
+        border: "none",
+        color: "#c084fc",
+        cursor: "pointer",
+        fontSize: 13,
+        padding: "0 2px",
+        lineHeight: 1
+      }
+    }, "\u2715"))
+  }))), React.createElement(MultiPick, {
+    label: "\u{1F4CD} Venue (name, # or postcode)",
+    options: xe,
+    selected: x,
+    onToggle: D,
+    onClear: J,
+    box: ne,
+    fmt: lt,
+    column: Y
+  }), React.createElement("select", {
+    "aria-label": "Experience level",
+    value: fe,
+    onChange: k => ue(k.target.value),
+    style: ne
+  }, React.createElement("option", {
+    value: ""
+  }, "\u{1F3AD} Experience level"), ye.map(k => React.createElement("option", {
+    key: k,
+    value: k
+  }, k))), React.createElement("select", {
+    "aria-label": "Country",
+    value: Re,
+    onChange: k => ee(k.target.value),
+    style: ne
+  }, React.createElement("option", {
+    value: ""
+  }, "\u{1F30D} All countries"), tt.map(k => React.createElement("option", {
+    key: k,
+    value: k
+  }, k))), React.createElement("select", {
+    "aria-label": "Duration",
+    value: ct,
+    onChange: k => Qe(k.target.value),
+    style: ne
+  }, React.createElement("option", {
+    value: ""
+  }, "\u23F1 Duration\u2026"), React.createElement("option", {
+    value: "30"
+  }, "\u2264 30 min"), React.createElement("option", {
+    value: "60"
+  }, "\u2264 60 min"), React.createElement("option", {
+    value: "90"
+  }, "\u2264 90 min"), React.createElement("option", {
+    value: "120"
+  }, "\u2264 120 min")), React.createElement("select", {
+    "aria-label": "Start time of day",
+    value: it,
+    onChange: k => $e(k.target.value),
+    style: ne
+  }, React.createElement("option", {
+    value: ""
+  }, "\u{1F550} Any start"), React.createElement("option", {
+    value: "morning"
+  }, "\u{1F305} Morning (6am\u201312)"), React.createElement("option", {
+    value: "afternoon"
+  }, "\u2600\uFE0F Afternoon (12\u20135pm)"), React.createElement("option", {
+    value: "evening"
+  }, "\u{1F306} Evening (5\u201310pm)"), React.createElement("option", {
+    value: "late"
+  }, "\u{1F319} Late (10pm\u20136am)")), React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 14,
+      flexWrap: "wrap",
+      alignItems: "flex-end",
+      ...pt
+    }
+  }, React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 2,
+      flex: "1 1 185px",
+      minWidth: 0
+    }
+  }, React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: C.txt2,
+      fontWeight: 700
+    }
+  }, "\u{1F4C5} Runs between"), React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6
+    }
+  }, React.createElement("input", {
+    "aria-label": "Runs from date",
+    type: "date",
+    value: at,
+    onChange: k => se(k.target.value),
+    style: ne
+  }), React.createElement("input", {
+    "aria-label": "Runs until date",
+    type: "date",
+    value: et,
+    onChange: k => X(k.target.value),
+    style: ne
+  }))), React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 2,
+      flex: "1 1 235px",
+      minWidth: 0
+    }
+  }, React.createElement("span", {
+    style: {
+      fontSize: 12,
+      color: C.txt2,
+      fontWeight: 700
+    }
+  }, "\u{1F4B7} Price: \xA3", Te, "\u2013\xA3", Oe >= O ? O + "+" : Oe), React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      alignItems: "center"
+    }
+  }, React.createElement("input", {
+    "aria-label": "Minimum price in pounds",
+    type: "number",
+    min: 0,
+    max: O,
+    value: Te,
+    onChange: k => {
+      var G = Number(k.target.value);
+      isNaN(G) || (G = Math.max(0, Math.min(G, Oe)), R(G <= 0 ? null : G))
+    },
+    style: {
+      width: 48,
+      padding: "6px 4px",
+      borderRadius: 8,
+      border: "1px solid " + C.border,
+      background: "rgba(255,255,255,0.06)",
+      color: C.txt,
+      fontSize: 12,
+      textAlign: "center",
+      boxSizing: "border-box",
+      colorScheme: "dark"
+    }
+  }), React.createElement("div", {
+    style: {
+      position: "relative",
+      flex: 1,
+      height: 22,
+      display: "flex",
+      alignItems: "center",
+      minWidth: 56
+    }
+  }, React.createElement("div", {
+    style: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      height: 4,
+      borderRadius: 2,
+      background: "rgba(255,255,255,0.18)"
+    }
+  }), React.createElement("div", {
+    style: {
+      position: "absolute",
+      height: 4,
+      borderRadius: 2,
+      background: C.accent,
+      left: Te / O * 100 + "%",
+      right: 100 - Oe / O * 100 + "%"
+    }
+  }), React.createElement("input", {
+    "aria-label": "Minimum price slider",
+    type: "range",
+    className: "dr",
+    min: 0,
+    max: O,
+    value: Te,
+    onChange: k => {
+      var G = Number(k.target.value);
+      R(G <= 0 ? null : Math.min(G, Oe))
+    }
+  }), React.createElement("input", {
+    "aria-label": "Maximum price slider",
+    type: "range",
+    className: "dr",
+    min: 0,
+    max: O,
+    value: Oe,
+    onChange: k => {
+      var G = Number(k.target.value);
+      U(G >= O ? null : Math.max(G, Te))
+    }
+  })), React.createElement("input", {
+    "aria-label": "Maximum price in pounds",
+    type: "number",
+    min: 0,
+    max: O,
+    value: Oe,
+    onChange: k => {
+      var G = Number(k.target.value);
+      isNaN(G) || (G = Math.max(Te, Math.min(G, O)), U(G >= O ? null : G))
+    },
+    style: {
+      width: 48,
+      padding: "6px 4px",
+      borderRadius: 8,
+      border: "1px solid " + C.border,
+      background: "rgba(255,255,255,0.06)",
+      color: C.txt,
+      fontSize: 12,
+      textAlign: "center",
+      boxSizing: "border-box",
+      colorScheme: "dark"
+    }
+  }))))))
+}
+
+function Tiles({
+  list: t,
+  plan: n,
+  booked: o,
+  proposals: a,
+  fields: s,
+  onWish: d,
+  onBook: w,
+  onProp: p,
+  onOpen: h,
+  isMobile: mob
+}) {
+  var b = s || {},
+    y = function(g) {
+      return Object.assign({
+        width: 40,
+        height: 40,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 8,
+        fontSize: 14,
+        cursor: "pointer",
+        flexShrink: 0
+      }, g || {})
+    };
+  return React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 8
+    }
+  }, (t || []).map(function(g) {
+    var S = [g.venueAddr, g.venuePostcode].filter(Boolean).join(", "),
+      I = n.has(g.code),
+      f = !!o[g.code];
+    return React.createElement("div", {
+      key: g.code,
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "11px 13px",
+        borderRadius: 10,
+        background: C.card,
+        border: "1px solid " + C.border,
+        borderLeft: "4px solid " + orgColor(g.venue)
+      }
+    }, React.createElement("div", {
+      onClick: function() {
+        h(g)
+      },
+      style: {
+        flex: 1,
+        minWidth: 0,
+        cursor: "pointer"
+      }
+    }, React.createElement("div", {
+      style: {
+        fontWeight: 800,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      }
+    }, g.title), b.artist !== !1 && g.artist && React.createElement("div", {
+      style: {
+        fontSize: 12,
+        color: C.txt2,
+        marginTop: 1,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      }
+    }, g.artist), function() {
+      var R = [];
+      return b.time !== !1 && R.push("\u{1F550} " + (g.startStr || "?") + (g.endStr ? "\u2013" + g.endStr : "") + (g.duration ? " (" + g.duration + "m)" : "")), b.price !== !1 && priceLabel(g.priceFull) && R.push(priceLabel(g.priceFull)), b.genre !== !1 && g.genre && R.push(g.genre), R.length ? React.createElement("div", {
+        style: {
+          fontSize: 12,
+          color: C.txt2,
+          marginTop: 2,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap"
+        }
+      }, R.join(" \xB7 ")) : null
+    }(), b.venue !== !1 && g.venue && React.createElement("a", {
+      href: mapsUrl(g),
+      target: "_blank",
+      rel: "noopener noreferrer",
+      onClick: function(R) {
+        R.stopPropagation()
+      },
+      "aria-label": g.venue + " on Google Maps (opens in a new tab)",
+      style: {
+        display: "block",
+        fontSize: 11,
+        color: C.accent,
+        marginTop: 2,
+        textDecoration: "none",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      }
+    }, "\u{1F4CD} ", g.venue, g.venueCode ? " (#" + g.venueCode + ")" : "", S ? ", " + S : "", " \u2197")), React.createElement("div", {
+      style: mob ? {
+        display: "grid",
+        gridTemplateColumns: "repeat(2, 40px)",
+        gap: 6,
+        flexShrink: 0,
+        alignSelf: "center"
+      } : {
+        display: "flex",
+        gap: 6,
+        alignItems: "center",
+        flexShrink: 0
+      }
+    }, React.createElement("button", {
+      onClick: function() {
+        d(g.code)
+      },
+      "aria-label": I ? "Remove " + (g.title || "this show") + " from your wishlist" : "Add " + (g.title || "this show") + " to your wishlist",
+      title: I ? "On your wishlist" : "Add to wishlist",
+      style: y({
+        border: "1px solid " + (I ? "#34d399" : C.border),
+        background: I ? "rgba(52,211,153,0.16)" : "transparent",
+        color: I ? "#34d399" : C.txt2
+      })
+    }, I ? "\u2665" : "\u2661"), React.createElement("button", {
+      onClick: function() {
+        w(g)
+      },
+      "aria-label": f ? "Edit booking for " + (g.title || "this show") : "Mark " + (g.title || "this show") + " as booked",
+      title: f ? "Booked \u2014 tap to edit" : "Mark as booked",
+      style: y({
+        border: "1px solid " + (f ? "#93c5fd" : C.border),
+        background: f ? "rgba(96,165,250,0.18)" : "transparent",
+        color: f ? "#93c5fd" : C.txt2,
+        fontSize: 13
+      })
+    }, "\u{1F39F}"), React.createElement("select", {
+      value: "",
+      onChange: function(R) {
+        R.target.value && p(R.target.value, g.code)
+      },
+      "aria-label": "Add to a proposal",
+      title: "Add to a proposal",
+      style: y({
+        border: "1px solid " + C.border,
+        background: "transparent",
+        color: C.txt2,
+        fontSize: 15,
+        colorScheme: "dark",
+        padding: 0,
+        textAlign: "center",
+        textAlignLast: "center",
+        appearance: "none",
+        WebkitAppearance: "none",
+        MozAppearance: "none"
+      })
+    }, React.createElement("option", {
+      value: ""
+    }, "\u{1F4CB}"), (a || []).map(function(R) {
+      return React.createElement("option", {
+        key: R.id,
+        value: R.id
+      }, R.title || "Untitled")
+    }), React.createElement("option", {
+      value: "__new"
+    }, "\uFF0B New")), g.website && React.createElement("a", {
+      href: g.website,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      title: "View listing (opens in a new tab)",
+      "aria-label": "View " + (g.title || "this show") + " listing (opens in a new tab)",
+      style: y({
+        border: "1px solid " + C.border,
+        color: C.txt2,
+        textDecoration: "none"
+      })
+    }, React.createElement(LinkIcon, null))))
+  }))
+}
+
+function App() {
+  const t = useMemo(() => parseHash(), []),
+    [n, o] = useState(null),
+    [a, s] = useState(""),
+    [d, w] = useState(() => {
+      try {
+        return new Set(JSON.parse(localStorage.getItem(PLAN_KEY) || "[]"))
+      } catch {
+        return new Set
+      }
+    }),
+    [p, h] = useState(() => {
+      try {
+        return JSON.parse(localStorage.getItem("fringe-public-booked-v1") || "{}")
+      } catch {
+        return {}
+      }
+    }),
+    b = function(e) {
+      h(function(r) {
+        var l = Object.assign({}, r);
+        return (e || []).forEach(function(i) {
+          l[i.code] = {
+            date: i.date,
+            start: fmtMin_(i.sm),
+            end: fmtMin_(i.em)
+          }
+        }), l
+      })
+    },
+    [y, g] = useState(() => {
+      try {
+        return JSON.parse(localStorage.getItem("fringe-public-wishdate-v1") || "{}")
+      } catch {
+        return {}
+      }
+    }),
+    [S, I] = useState(null),
+    [f, R] = useState(() => new Date().toISOString().slice(0, 10)),
+    [E, U] = useState("all"),
+    [O, M] = useState("week"),
+    [K, x] = useState("booked"),
+    [D, J] = useState(() => {
+      try {
+        return localStorage.getItem("fringe-public-browseview") || "cards"
+      } catch {
+        return "cards"
+      }
+    }),
+    [v, A] = useState(() => {
+      try {
+        return Number(localStorage.getItem("fringe-public-cardsize")) || 60
+      } catch {
+        return 60
+      }
+    }),
+    [_, fe] = useState(() => {
+      try {
+        return Number(localStorage.getItem("fringe-public-tablesize")) || 120
+      } catch {
+        return 120
+      }
+    }),
+    [ue, Re] = useState(() => {
+      try {
+        return JSON.parse(localStorage.getItem("fringe-public-cardfields") || "{}")
+      } catch {
+        return {}
+      }
+    }),
+    [ee, ct] = useState(!1),
+    [Qe, it] = useState(""),
+    [$e, at] = useState("asc"),
+    [se, et] = useState(() => {
+      try {
+        return JSON.parse(localStorage.getItem(NOTES_KEY) || "{}")
+      } catch {
+        return {}
+      }
+    }),
+    [X, xe] = useState(() => {
+      try {
+        return JSON.parse(localStorage.getItem("fringe-public-proposals-v1") || "[]")
+      } catch {
+        return []
+      }
+    }),
+    [lt, Le] = useState(null),
+    [ye, tt] = useState(""),
+    [W, te] = useState(() => {
+      try {
+        return localStorage.getItem("fringe-proposal-layout") || "vertical"
+      } catch {
+        return "vertical"
+      }
+    }),
+    [q, ae] = useState({}),
+    [Y, ut] = useState({
+      id: null,
+      q: ""
+    }),
+    [ne, pt] = useState(!1),
+    [Te, Oe] = useState(""),
+    [k, G] = useState(!1),
+    [yt, ft] = useState(null);
+  useEffect(() => {
+    k && (Array.isArray(yt) || (ft("loading"), fetch(HELP_URL).then(e => e.text()).then(e => {
+      let r = Papa.parse(e, {
+        skipEmptyLines: !0
+      }).data || [];
+      r.length && r[0].some(l => /^(title|section|question|heading|topic|content|answer|body|text|help)$/i.test((l || "").trim())) && (r = r.slice(1)), ft(r)
+    }).catch(() => ft("error"))))
+  }, [k]);
+  const [Q, mt] = useState(t.view || "browse"), [Pe, At] = useState(t.q || ""), [_e, Nt] = useState(t.genre || ""), [Ve, Et] = useState(t.age || ""), [He, Dt] = useState(t.access || ""), [Ae, Bt] = useState(t.pmin ? Number(t.pmin) : null), [Ne, Mt] = useState(t.pmax ? Number(t.pmax) : null), [Ee, Ft] = useState(t.on || ""), [nt, jt] = useState(() => new Set(t.dates ? t.dates.split("|") : [])), [Pn, _n] = useState(""), [We, Lt] = useState(() => new Set(t.venue ? t.venue.split("|") : [])), [De, Pt] = useState(() => new Set(t.venueNo ? t.venueNo.split("|") : [])), [Ue, _t] = useState(t.atype || ""), [Ge, Vt] = useState(t.country || ""), [Je, Ht] = useState(t.dur || ""), [we, Ut] = useState(t.tod || ""), [qe, Gt] = useState(t.df || ""), [Ye, Jt] = useState(t.dt || ""), [$, qt] = useState(t.smart || ""), [Ze, dn] = useState(!1), [st, kt] = useState(60), [oe, de] = useState(null), [V, cn] = useState(typeof window < "u" && window.innerWidth <= 640), [un, Ie] = useState(!1), [dt, Ct] = useState(null), [gt, pn] = useState(() => {
+    try {
+      return localStorage.getItem("fringe-public-theme") || "dark"
+    } catch {
+      return "dark"
+    }
+  }), [zt, fn] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("fringe-public-avail-v1") || "[]")
+    } catch {
+      return []
+    }
+  }), [gn, ht] = useState(!1), [hn, vt] = useState(!1), [vn, Yt] = useState(!1), [bn, Zt] = useState(!1);
+  useEffect(() => {
+    try {
+      var e = "fringe-public-data-version",
+        r = parseInt(localStorage.getItem(e) || "0", 10);
+      r ? r < APP_DATA_VERSION && (localStorage.setItem(e, String(APP_DATA_VERSION)), Zt(!0)) : localStorage.setItem(e, String(APP_DATA_VERSION))
+    } catch {}
+  }, []);
+  const [Ke, Tt] = useState("cards");
+  THEME = gt, useEffect(() => {
+    const e = () => cn(window.innerWidth <= 640);
+    return window.addEventListener("resize", e), () => window.removeEventListener("resize", e)
+  }, []);
+  const xt = useMemo(() => {
+      try {
+        const e = (window.location.hash || "").match(/[#&]p=([^&]+)/);
+        if (!e) return null;
+        const r = LZString.decompressFromEncodedURIComponent(e[1]);
+        return r ? r.split(",") : null
+      } catch {
+        return null
+      }
+    }, []),
+    ot = useMemo(() => {
+      try {
+        const e = (window.location.hash || "").match(/[#&]props=([^&]+)/);
+        return e ? JSON.parse(LZString.decompressFromEncodedURIComponent(e[1])).map(l => ({
+          title: l.t || "",
+          comment: l.c || "",
+          date: l.d || "",
+          codes: l.k || []
+        })) : null
+      } catch {
+        return null
+      }
+    }, []);
+  useEffect(() => {
+    try {
+      const e = (window.location.hash || "").match(/[#&]import=([^&]+)/);
+      if (!e) return;
+      const r = LZString.decompressFromEncodedURIComponent(e[1]);
+      if (!r) return;
+      const l = JSON.parse(r);
+      Ct({
+        codes: l.p || [],
+        notes: l.n || {}
+      })
+    } catch {}
+  }, []);
+  const yn = () => {
+    if (dt) {
+      w(e => {
+        const r = new Set(e);
+        return dt.codes.forEach(l => r.add(l)), r
+      }), et(e => ({
+        ...dt.notes,
+        ...e
+      })), Ct(null);
+      try {
+        history.replaceState(null, "", window.location.pathname)
+      } catch {}
+    }
+  };
+  useEffect(() => {
+    if (typeof window < "u" && window.__FRINGE_PREVIEW__) {
+      try {
+        o(window.__FRINGE_PREVIEW__), Le(new Date)
+      } catch {
+        s("Preview data error.")
+      }
+      return
+    }
+    DATA_SOURCE === "api" ? loadAllFromApi().then(function(e) {
+      o(e.map(parseApiEvent).filter(Boolean)), Le(new Date)
+    }).catch(e => s("Couldn't reach the Fringe API proxy. Make sure the function is deployed and the API key/secret are set. (" + (e && e.message || "error") + ")")) : fetch(CSV_URL).then(e => {
+      if (!e.ok) throw new Error("HTTP " + e.status);
+      return e.text()
+    }).then(e => {
+      const r = Papa.parse(e, {
+        header: !0,
+        skipEmptyLines: !0
+      });
+      o(parseRows(r.data))
+    }).catch(e => s("Couldn't reach the show list. This normally means the page can't fetch from Google Sheets in this preview \u2014 it works once the site is live on its own web address. If it also fails live, check the \u2018All\u2019 tab is still Published to the web as CSV. (" + (e && e.message || "network error") + ")"))
+  }, []), useEffect(() => {
+    try {
+      localStorage.setItem(PLAN_KEY, JSON.stringify([...d]))
+    } catch {}
+  }, [d]), useEffect(() => {
+    try {
+      localStorage.setItem("fringe-public-booked-v1", JSON.stringify(p))
+    } catch {}
+  }, [p]), useEffect(() => {
+    try {
+      localStorage.setItem("fringe-public-wishdate-v1", JSON.stringify(y))
+    } catch {}
+  }, [y]), useEffect(() => {
+    try {
+      localStorage.setItem("fringe-public-browseview", D)
+    } catch {}
+  }, [D]), useEffect(() => {
+    try {
+      localStorage.setItem("fringe-public-cardsize", String(v))
+    } catch {}
+  }, [v]), useEffect(() => {
+    try {
+      localStorage.setItem("fringe-public-tablesize", String(_))
+    } catch {}
+  }, [_]), useEffect(() => {
+    try {
+      localStorage.setItem("fringe-public-cardfields", JSON.stringify(ue))
+    } catch {}
+  }, [ue]), useEffect(() => {
+    try {
+      localStorage.setItem("fringe-public-theme", gt)
+    } catch {}
+    try {
+      document.documentElement.setAttribute("data-theme", gt)
+    } catch {}
+  }, [gt]), useEffect(() => {
+    try {
+      localStorage.setItem("fringe-public-avail-v1", JSON.stringify(zt))
+    } catch {}
+  }, [zt]), useEffect(() => {
+    fetchAdminEmail(function(e) {
+      e && tt(String(e))
+    })
+  }, []), useEffect(() => {
+    try {
+      document.title = "Fringe " + SITE_YEAR + " \xB7 Plan your shows"
+    } catch {}
+  }, []), useEffect(() => {
+    try {
+      var e = (window.location.hash || "").match(/[#&]sync=([^&]+)/);
+      if (e) {
+        if (window.confirm("Import saved Fringe data (wishlist, bookings, options, availability, settings) from this link? It replaces what is currently on this device.") && importAllData(e[1])) {
+          window.location.replace(window.location.pathname);
+          return
+        }
+        try {
+          window.history.replaceState(null, "", window.location.pathname)
+        } catch {}
+      }
+    } catch {}
+  }, []), useEffect(() => {
+    try {
+      if (/[#&](props|p|j|jolive|import|sync)=/.test(window.location.hash || "")) return
+    } catch {}
+    var e = ["view=" + Q],
+      r = function(l, i) {
+        i && e.push(l + "=" + encodeURIComponent(i))
+      };
+    r("q", Pe), r("genre", _e), r("age", Ve), r("access", He), r("atype", Ue), r("country", Ge), r("dur", Je), r("tod", we), r("df", qe), r("dt", Ye), r("smart", $), r("on", Ee), Ae != null && e.push("pmin=" + Ae), Ne != null && e.push("pmax=" + Ne), We.size && e.push("venue=" + encodeURIComponent([...We].join("|"))), De.size && e.push("venueNo=" + encodeURIComponent([...De].join("|")));
+    try {
+      history.replaceState(null, "", "#" + e.join("&"))
+    } catch {}
+  }, [Q, Pe, _e, Ve, He, Ue, Ge, Je, we, qe, Ye, $, Ee, Ae, Ne, We, De]), useEffect(() => {
+    try {
+      localStorage.setItem(NOTES_KEY, JSON.stringify(se))
+    } catch {}
+  }, [se]), useEffect(() => {
+    try {
+      localStorage.setItem("fringe-public-proposals-v1", JSON.stringify(X))
+    } catch {}
+  }, [X]);
+  const Se = e => w(r => {
+      const l = new Set(r);
+      return l.has(e) ? l.delete(e) : l.add(e), l
+    }),
+    mn = e => {
+      e && jt(r => {
+        var l = new Set(r);
+        return l.add(e), l
+      })
+    },
+    xn = e => jt(r => {
+      var l = new Set(r);
+      return l.delete(e), l
+    }),
+    wn = e => Lt(r => {
+      const l = new Set(r);
+      return l.has(e) ? l.delete(e) : l.add(e), l
+    }),
+    Kt = () => Lt(new Set),
+    Sn = e => Pt(r => {
+      const l = new Set(r);
+      return l.has(e) ? l.delete(e) : l.add(e), l
+    }),
+    Xt = () => Pt(new Set),
+    Qt = (e, r) => et(l => {
+      const i = {
+        ...l
+      };
+      return r && r.trim() ? i[e] = r : delete i[e], i
+    }),
+    kn = (e, r) => {
+      h(l => ({
+        ...l,
+        [e]: r
+      })), I(null)
+    },
+    $t = e => h(r => {
+      const l = {
+        ...r
+      };
+      return delete l[e], l
+    }),
+    Be = e => {
+      p[e.code] ? $t(e.code) : I(e)
+    },
+    Cn = (e, r) => g(l => {
+      const i = {
+        ...l
+      };
+      return r ? i[e] = r : delete i[e], i
+    }),
+    en = e => {
+      te(e);
+      try {
+        localStorage.setItem("fringe-proposal-layout", e)
+      } catch {}
+    },
+    zn = () => xe(e => [...e, {
+      id: "pp" + Date.now(),
+      title: "New option",
+      comment: "",
+      date: "",
+      codes: []
+    }]);
+  useEffect(() => {
+    try {
+      !localStorage.getItem("fringe-proposals-seeded") && X.length === 0 && (xe([{
+        id: "pp" + Date.now(),
+        title: "New option",
+        comment: "",
+        date: "",
+        codes: []
+      }]), localStorage.setItem("fringe-proposals-seeded", "1"))
+    } catch {}
+  }, []);
+  const Wt = (e, r) => xe(l => l.map(i => i.id === e ? {
+      ...i,
+      ...r
+    } : i)),
+    Tn = e => xe(r => r.filter(l => l.id !== e)),
+    tn = (e, r) => xe(l => l.map(i => i.id === e ? i.codes.includes(r) ? i : {
+      ...i,
+      codes: [...i.codes, r]
+    } : i)),
+    wt = (e, r) => {
+      if (e === "__new") {
+        const l = "pp" + Date.now();
+        xe(i => [...i, {
+          id: l,
+          title: "New option",
+          comment: "",
+          date: "",
+          codes: [r]
+        }])
+      } else tn(e, r)
+    },
+    nn = (e, r) => xe(l => l.map(i => i.id === e ? {
+      ...i,
+      codes: i.codes.filter(u => u !== r)
+    } : i)),
+    Wn = e => ae(r => ({
+      ...r,
+      [e]: !r[e]
+    })),
+    on = e => LZString.compressToEncodedURIComponent(JSON.stringify(e.map(r => ({
+      t: r.title,
+      c: r.comment,
+      d: r.date || "",
+      k: r.codes
+    })))),
+    In = () => {
+      if (!X.length) {
+        window.alert("Make a proposal first.");
+        return
+      }
+      const e = window.location.origin + window.location.pathname + "#props=" + on(X);
+      try {
+        navigator.clipboard.writeText(e)
+      } catch {}
+      window.prompt("Share this read-only link (" + X.length + " option" + (X.length !== 1 ? "s" : "") + "):", e)
+    },
+    Rn = e => {
+      const r = window.location.origin + window.location.pathname + "#props=" + on([e]);
+      try {
+        navigator.clipboard.writeText(r)
+      } catch {}
+      window.prompt("Share just this option:", r)
+    },
+    On = useMemo(() => {
+      if (!n) return [];
+      const e = new Set;
+      return n.forEach(r => r.genre && e.add(r.genre)), [...e].sort()
+    }, [n]),
+    An = useMemo(() => {
+      if (!n) return [];
+      const e = new Set;
+      return n.forEach(r => r.age && e.add(r.age)), [...e].sort((r, l) => ageNum(r) - ageNum(l))
+    }, [n]),
+    Vn = useMemo(() => {
+      if (!n) return [];
+      const e = new Set;
+      return n.forEach(r => r.venue && e.add(r.venue)), [...e].sort()
+    }, [n]),
+    Nn = useMemo(() => {
+      if (!n) return [];
+      const e = new Set;
+      return n.forEach(r => r.venueCode && e.add(r.venueCode)), [...e].sort((r, l) => (Number(r) || 0) - (Number(l) || 0))
+    }, [n]),
+    rn = useMemo(() => {
+      if (!n) return {
+        list: [],
+        meta: {}
+      };
+      var e = {};
+      n.forEach(function(l) {
+        var i = l.venueCode || l.venue;
+        i && (e[i] ? !e[i].pc && l.venuePostcode && (e[i].pc = l.venuePostcode) : e[i] = {
+          code: l.venueCode || "",
+          name: l.venue || "",
+          pc: l.venuePostcode || ""
+        })
+      });
+      var r = Object.keys(e).sort(function(l, i) {
+        var u = Number(e[l].code) || 99999,
+          c = Number(e[i].code) || 99999;
+        return u !== c ? u - c : (e[l].name || "").localeCompare(e[i].name || "")
+      });
+      return {
+        list: r,
+        meta: e
+      }
+    }, [n]),
+    En = function(e) {
+      var r = rn.meta[e];
+      return r ? (r.code ? "#" + r.code + " \u2014 " : "") + (r.name || "Venue") + (r.pc ? ", " + r.pc : "") : e
+    },
+    Dn = useMemo(() => {
+      if (!n) return [];
+      const e = new Set;
+      return n.forEach(r => r.artistType && e.add(r.artistType)), [...e].sort()
+    }, [n]),
+    Bn = useMemo(() => {
+      if (!n) return [];
+      const e = new Set;
+      return n.forEach(r => r.country && e.add(r.country)), [...e].sort()
+    }, [n]),
+    Mn = useMemo(() => {
+      if (!n) return [];
+      const e = new Set;
+      return n.forEach(r => (r.access || "").split(",").forEach(l => {
+        const i = l.trim();
+        i && e.add(i)
+      })), [...e].sort()
+    }, [n]),
+    Fn = useMemo(() => {
+      if (!n) return 50;
+      let e = 0;
+      return n.forEach(r => {
+        const l = poundsOf(r.priceFull);
+        !isNaN(l) && l > e && (e = l)
+      }), Math.max(10, Math.ceil(e))
+    }, [n]),
+    It = useMemo(() => {
+      if (!n || !$) return null;
+      const e = new Set,
+        r = (i, u) => {
+          if (!i.length) return null;
+          const c = i.slice().sort((T, B) => T - B);
+          return c[Math.min(c.length - 1, Math.floor(c.length * u))]
+        },
+        l = (i, u) => {
+          if (!i || !u) return null;
+          const c = new Date(i + "T12:00:00"),
+            T = new Date(u + "T12:00:00");
+          return isNaN(c.getTime()) || isNaN(T.getTime()) ? null : Math.round((T - c) / 864e5)
+        };
+      if ($ === "short") n.forEach(i => {
+        const u = l(i.first, i.last);
+        u != null && u <= 3 && e.add(i.code)
+      });
+      else if ($ === "free") n.forEach(i => {
+        poundsOf(i.priceFull) === 0 && e.add(i.code)
+      });
+      else if ($ === "expensive") {
+        const i = n.map(c => poundsOf(c.priceFull)).filter(c => !isNaN(c) && c > 0),
+          u = r(i, .75);
+        n.forEach(c => {
+          const T = poundsOf(c.priceFull);
+          !isNaN(T) && T > 0 && u != null && T >= u && e.add(c.code)
+        })
+      } else if ($ === "cheap") {
+        const i = n.map(c => poundsOf(c.priceFull)).filter(c => !isNaN(c) && c > 0),
+          u = r(i, .25);
+        n.forEach(c => {
+          const T = poundsOf(c.priceFull);
+          !isNaN(T) && T > 0 && u != null && T <= u && e.add(c.code)
+        })
+      } else if ($ === "big") {
+        const i = n.map(c => parseInt(c.performers) || 0).filter(c => c > 0),
+          u = r(i, .75);
+        n.forEach(c => {
+          const T = parseInt(c.performers) || 0;
+          T > 0 && u != null && T >= u && e.add(c.code)
+        })
+      } else if ($ === "longest") {
+        const i = n.map(c => c.duration || 0).filter(c => c > 0),
+          u = r(i, .75);
+        n.forEach(c => {
+          c.duration && u != null && c.duration >= u && e.add(c.code)
+        })
+      } else if ($ === "shortest") {
+        const i = n.map(c => c.duration || 0).filter(c => c > 0),
+          u = r(i, .25);
+        n.forEach(c => {
+          c.duration && u != null && c.duration <= u && e.add(c.code)
+        })
+      } else if ($ === "quiet") {
+        const i = {};
+        n.forEach(c => {
+          const T = c.venue || "?";
+          i[T] = (i[T] || 0) + 1
+        });
+        const u = r(Object.keys(i).map(c => i[c]), .25);
+        n.forEach(c => {
+          u != null && (i[c.venue || "?"] || 0) <= u && e.add(c.code)
+        })
+      } else if ($ === "rare" || $ === "pop") {
+        const i = {};
+        n.forEach(c => {
+          c.genre && (i[c.genre] = (i[c.genre] || 0) + 1)
+        });
+        const u = Object.keys(i).map(c => [c, i[c]]);
+        if (u.length) {
+          u.sort((T, B) => T[1] - B[1]);
+          const c = $ === "rare" ? u[0][0] : u[u.length - 1][0];
+          n.forEach(T => {
+            T.genre === c && e.add(T.code)
+          })
+        }
+      }
+      return e
+    }, [n, $]),
+    an = e => {
+      if ($ && It && !It.has(e.code) || _e && e.genre !== _e || Ve && e.age !== Ve || He && !(e.access || "").toLowerCase().includes(He.toLowerCase()) || We.size && !(We.has(e.venueCode) || We.has(e.venue)) || De.size && !De.has(e.venueCode) || Ue && e.artistType !== Ue || Ge && e.country !== Ge || Je && (!e.duration || e.duration > Number(Je))) return !1;
+      if (we) {
+        var r = timeToMin_(e.startStr);
+        if (r == null || we === "morning" && !(r >= 360 && r < 720) || we === "afternoon" && !(r >= 720 && r < 1020) || we === "evening" && !(r >= 1020 && r < 1320) || we === "late" && !(r >= 1320 || r < 360)) return !1
+      }
+      if (qe && e.last && e.last < qe || Ye && e.first && e.first > Ye) return !1;
+      if (Ae != null) {
+        const i = poundsOf(e.priceFull);
+        if (!isNaN(i) && i < Ae) return !1
+      }
+      if (Ne != null) {
+        const i = poundsOf(e.priceFull);
+        if (!isNaN(i) && i > Ne) return !1
+      }
+      if (Ee && (e.first && Ee < e.first || e.last && Ee > e.last)) return !1;
+      if (nt && nt.size) {
+        var l;
+        if (e.performances && e.performances.length ? l = e.performances.some(function(i) {
+            return nt.has(i.date)
+          }) : (l = !1, nt.forEach(function(i) {
+            (!e.first || i >= e.first) && (!e.last || i <= e.last) && (l = !0)
+          })), !l) return !1
+      }
+      if (Pe.trim()) {
+        const i = Pe.toLowerCase();
+        if (!(e.title + " " + e.artist + " " + e.venue + " " + e.genre + " " + e.tags.join(" ") + " " + e.teaser).toLowerCase().includes(i)) return !1
+      }
+      return !0
+    },
+    Xe = useMemo(() => n ? n.filter(an) : [], [n, Pe, _e, Ve, He, Ae, Ne, Ee, nt, We, De, Ue, Ge, Je, we, qe, Ye, $, It]),
+    Me = useMemo(() => n ? n.filter(e => d.has(e.code)) : [], [n, d]),
+    ln = useMemo(() => {
+      if (!n || !xt) return [];
+      const e = new Set(xt);
+      return n.filter(r => e.has(r.code))
+    }, [n, xt]);
+  useEffect(() => {
+    kt(D === "table" ? _ : v)
+  }, [D, v, _, Pe, _e, Ve, He, Ae, Ne, Ee, We, De, Ue, Ge, Je, we, qe, Ye, $]);
+  const me = Pe || _e || Ve || He || Ae != null || Ne != null || Ee || nt.size || We.size || De.size || Ue || Ge || Je || we || qe || Ye || $,
+    Rt = () => {
+      At(""), Nt(""), Et(""), Dt(""), Bt(null), Mt(null), Ft(""), Kt(), Xt(), _t(""), Vt(""), Ht(""), Ut(""), Gt(""), Jt(""), qt("")
+    },
+    Hn = () => {
+      const e = LZString.compressToEncodedURIComponent([...d].join(",")),
+        r = window.location.origin + window.location.pathname + "#p=" + e;
+      try {
+        navigator.clipboard.writeText(r)
+      } catch {}
+      window.prompt("Share this read-only link (" + d.size + " shows):", r)
+    },
+    Un = () => {
+      const e = {};
+      [...d].forEach(i => {
+        se[i] && (e[i] = se[i])
+      });
+      const r = LZString.compressToEncodedURIComponent(JSON.stringify({
+          p: [...d],
+          n: e
+        })),
+        l = window.location.origin + window.location.pathname + "#import=" + r;
+      try {
+        navigator.clipboard.writeText(l)
+      } catch {}
+      window.prompt("Open this link on your other device to copy your plan + notes across (no login needed):", l)
+    };
+  if (!n && !a) return React.createElement("div", {
+    role: "status",
+    "aria-live": "polite"
+  }, React.createElement("div", {
+    className: "spin",
+    "aria-hidden": "true"
+  }), React.createElement("div", {
+    style: {
+      textAlign: "center",
+      color: C.txt2
+    }
+  }, "Loading all Fringe ", SITE_YEAR, " shows\u2026"));
+  if (a) return React.createElement("div", {
+    style: {
+      textAlign: "center",
+      padding: 40,
+      color: "#fca5a5"
+    }
+  }, a);
+  if (xt) return React.createElement("div", {
+    style: {
+      maxWidth: 1e3,
+      margin: "0 auto",
+      padding: "0 12px 40px"
+    }
+  }, React.createElement("div", {
+    style: {
+      textAlign: "center",
+      padding: "26px 12px 16px",
+      borderBottom: "1px solid " + C.border,
+      marginBottom: 16
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 12,
+      fontWeight: 800,
+      letterSpacing: 2,
+      textTransform: "uppercase",
+      color: C.txt2
+    }
+  }, "Edinburgh Fringe ", SITE_YEAR), React.createElement("h1", {
+    style: {
+      fontSize: 26,
+      fontWeight: 900,
+      margin: "6px 0 0",
+      background: "linear-gradient(90deg,var(--pink),var(--accent))",
+      WebkitBackgroundClip: "text",
+      WebkitTextFillColor: "transparent"
+    }
+  }, "A shared shortlist"), React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: C.txt3,
+      marginTop: 4
+    }
+  }, ln.length, " shows \xB7 read-only"), React.createElement("a", {
+    href: window.location.pathname,
+    style: {
+      display: "inline-block",
+      marginTop: 12,
+      padding: "9px 18px",
+      borderRadius: 11,
+      background: C.accent,
+      color: "#fff",
+      textDecoration: "none",
+      fontSize: 14,
+      fontWeight: 800
+    }
+  }, "Build your own plan \u2192")), React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))",
+      gridAutoRows: "1fr",
+      gap: 12
+    }
+  }, ln.map(e => React.createElement(ShowCard, {
+    key: e.code,
+    s: e,
+    inPlan: d.has(e.code),
+    isBk: !!p[e.code],
+    hasNote: !!se[e.code],
+    onWish: () => Se(e.code),
+    onBook: () => Be(e),
+    onOpen: () => de(e)
+  }))), React.createElement(Detail, {
+    s: oe,
+    inPlan: oe && d.has(oe.code),
+    note: oe && se[oe.code],
+    onNote: Qt,
+    onToggle: () => oe && Se(oe.code),
+    onClose: () => de(null)
+  }));
+  if (ot) {
+    const e = {};
+    (n || []).forEach(l => e[l.code] = l);
+    const r = ot.length > 1;
+    return React.createElement("div", {
+      style: {
+        maxWidth: r && W === "horizontal" ? 1200 : 760,
+        margin: "0 auto",
+        padding: "0 12px 40px"
+      }
+    }, React.createElement("div", {
+      style: {
+        textAlign: "center",
+        padding: "26px 12px 16px",
+        borderBottom: "1px solid " + C.border,
+        marginBottom: 16
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 12,
+        fontWeight: 800,
+        letterSpacing: 2,
+        textTransform: "uppercase",
+        color: C.txt2
+      }
+    }, "Edinburgh Fringe ", SITE_YEAR), React.createElement("h1", {
+      style: {
+        fontSize: 26,
+        fontWeight: 900,
+        margin: "6px 0 0",
+        background: "linear-gradient(90deg,var(--pink),var(--accent))",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent"
+      }
+    }, r ? ot.length + " options for you" : ot[0].title || "A suggestion"), React.createElement("div", {
+      style: {
+        fontSize: 13,
+        color: C.txt3,
+        marginTop: 4
+      }
+    }, "Shared \xB7 read-only", r ? " \xB7 pick your favourite" : "")), React.createElement("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 8,
+        margin: "0 2px 14px",
+        flexWrap: "wrap"
+      }
+    }, r ? React.createElement(LayoutToggle, {
+      layout: W,
+      set: en
+    }) : React.createElement("span", null), React.createElement("a", {
+      href: window.location.pathname,
+      style: {
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "7px 14px",
+        borderRadius: 20,
+        background: C.accent,
+        color: "#fff",
+        textDecoration: "none",
+        fontSize: 12,
+        fontWeight: 800
+      }
+    }, React.createElement(ScheduleIcon, null), " Build your own")), React.createElement("div", {
+      style: r && W === "horizontal" ? {
+        display: "grid",
+        gridTemplateColumns: ot.length >= 3 ? "repeat(auto-fill,minmax(300px,1fr))" : "repeat(" + ot.length + ",minmax(0,1fr))",
+        gap: 16,
+        alignItems: "start",
+        padding: "0 8px"
+      } : {}
+    }, ot.map((l, i) => {
+      const u = l.codes.map(c => e[c]).filter(Boolean).sort(function(c, T) {
+        var B = timeToMin_(c.startStr),
+          j = timeToMin_(T.startStr);
+        return (B ?? 99999) - (j ?? 99999)
+      });
+      return React.createElement("div", {
+        key: i,
+        style: {
+          marginBottom: r && W !== "horizontal" ? 26 : 0
+        }
+      }, r && React.createElement("h2", {
+        style: {
+          fontSize: 18,
+          fontWeight: 800,
+          margin: "8px 2px 6px"
+        }
+      }, l.title || "Option " + (i + 1)), l.comment && React.createElement("div", {
+        style: {
+          fontSize: 14,
+          color: C.txt2,
+          lineHeight: 1.5,
+          background: "rgba(168,85,247,0.1)",
+          border: "1px solid rgba(168,85,247,0.25)",
+          borderRadius: 12,
+          padding: "10px 14px",
+          margin: "4px 2px 12px"
+        }
+      }, "\u{1F4AC} ", l.comment), l.date && React.createElement("div", {
+        style: {
+          fontSize: 13,
+          color: C.txt2,
+          fontWeight: 700,
+          margin: "0 2px 8px"
+        }
+      }, "\u{1F5D3} ", dateRange(l.date, l.date)), u.length > 0 && function() {
+        var c = u.map(function(j) {
+            var H = timeToMin_(j.startStr);
+            if (H == null) return null;
+            var m = timeToMin_(j.endStr);
+            return H < 360 && (H += 1440), m == null || m <= H ? m = H + (j.duration || 60) : m < 360 && (m += 1440), {
+              st: H,
+              en: m
+            }
+          }).filter(Boolean).sort(function(j, H) {
+            return j.st - H.st
+          }),
+          T = u.reduce(function(j, H) {
+            return j + (H.duration || 0)
+          }, 0),
+          B = u.reduce(function(j, H) {
+            return j + (typeof H.priceFull == "number" ? H.priceFull : 0)
+          }, 0);
+        return React.createElement("div", {
+          style: {
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            justifyContent: "center",
+            fontSize: 12,
+            fontWeight: 700,
+            color: C.txt2,
+            marginBottom: 10,
+            padding: "8px 11px",
+            background: "rgba(255,255,255,0.03)",
+            borderRadius: 10
+          }
+        }, c.length ? React.createElement("span", null, "\u23F1 ", fmtMin_(c[0].st), "\u2013", fmtMin_(c[c.length - 1].en)) : React.createElement("span", null, "No timed shows"), T ? React.createElement("span", null, "\xB7 ", Math.floor(T / 60), "h ", T % 60, "m of shows") : null, React.createElement("span", {
+          style: {
+            color: C.txt,
+            fontWeight: 800
+          }
+        }, "\xB7 \u{1F4B7} \xA3", (Math.round(B * 100) / 100).toString(), " total"))
+      }(), u.length > 0 && React.createElement("div", {
+        style: {
+          marginBottom: 12
+        }
+      }, React.createElement(TimedDay, {
+        items: u,
+        onOpen: de
+      })))
+    })))
+  }
+  const bt = Q !== "browse",
+    pe = (e, r, l) => React.createElement("button", {
+      onClick: () => {
+        if (e === "help") {
+          G(!0);
+          return
+        }
+        mt(e), Ie(!1)
+      },
+      title: r,
+      "aria-label": r,
+      style: V ? {
+        width: 44,
+        height: 44,
+        padding: 0,
+        borderRadius: 10,
+        border: "1px solid " + C.border,
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        flex: "0 0 auto",
+        background: Q === e ? "rgba(168,85,247,0.22)" : "transparent",
+        color: Q === e ? "#c084fc" : C.txt2
+      } : {
+        padding: "8px 16px",
+        borderRadius: 20,
+        border: "1px solid " + C.border,
+        cursor: "pointer",
+        fontWeight: 800,
+        flex: "none",
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        background: Q === e ? C.txt : "transparent",
+        color: Q === e ? C.bg : C.txt2
+      }
+    }, React.createElement("span", {
+      style: {
+        fontSize: V ? 20 : 15,
+        lineHeight: 1
+      }
+    }, l), !V && React.createElement("span", {
+      style: {
+        fontSize: 14
+      }
+    }, r));
+  return React.createElement("div", {
+    style: {
+      maxWidth: 1100,
+      margin: "0 auto",
+      padding: V ? "0 14px 112px" : "0 16px 50px"
+    }
+  }, React.createElement("a", {
+    href: "#main",
+    className: "skip"
+  }, "Skip to main content"), bn && React.createElement("div", {
+    role: "status",
+    style: {
+      background: "rgba(168,85,247,0.14)",
+      border: "1px solid " + C.accent,
+      borderRadius: 12,
+      padding: "10px 14px",
+      margin: "10px 0 0",
+      display: "flex",
+      gap: 10,
+      alignItems: "center",
+      flexWrap: "wrap",
+      fontSize: 13
+    }
+  }, React.createElement("span", {
+    style: {
+      color: C.txt,
+      flex: "1 1 220px"
+    }
+  }, "\u2728 The planner's been updated \u2014 your wishlist, bookings and options are safe. Grab a backup just in case."), React.createElement("button", {
+    onClick: downloadBackup,
+    style: {
+      padding: "7px 13px",
+      borderRadius: 9,
+      border: "none",
+      background: C.accent,
+      color: "#fff",
+      fontWeight: 800,
+      cursor: "pointer",
+      fontSize: 12
+    }
+  }, "\u2B07 Download backup"), React.createElement("button", {
+    onClick: () => Zt(!1),
+    style: {
+      padding: "7px 11px",
+      borderRadius: 9,
+      border: "1px solid " + C.border,
+      background: "transparent",
+      color: C.txt2,
+      fontWeight: 700,
+      cursor: "pointer",
+      fontSize: 12
+    }
+  }, "Dismiss")), function() {
+    var e = {
+        browse: "Browse all",
+        plan: "Wishlist",
+        booked: "Bookings",
+        calendar: "Calendar",
+        planner: "Planner",
+        proposals: "Pitch a Day!",
+        map: "Map",
+        stats: "Stats"
+      } [Q] || "",
+      r = {
+        width: 40,
+        height: 36,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 9,
+        border: "1px solid " + C.border,
+        background: "transparent",
+        color: C.txt2,
+        cursor: "pointer",
+        flexShrink: 0
+      };
+    return React.createElement("div", {
+      role: "banner",
+      style: bt ? {
+        position: "sticky",
+        top: 0,
+        zIndex: 50,
+        background: C.bg,
+        borderBottom: "1px solid " + C.border
+      } : {}
+    }, React.createElement("div", {
+      style: {
+        position: "relative",
+        textAlign: "center",
+        padding: bt ? "9px 12px 12px" : (V ? "58px 12px 12px" : "22px 12px 12px")
+      }
+    }, React.createElement("div", {
+      style: {
+        position: "absolute",
+        left: 12,
+        top: bt ? 7 : 14,
+        display: "flex",
+        gap: 6,
+        alignItems: "center"
+      }
+    }, React.createElement(ThemeToggleCollapsible, {
+      theme: gt,
+      set: pn
+    }), React.createElement("button", {
+      onClick: () => Yt(!0),
+      "aria-label": "Copy my data to another device",
+      title: "Copy my data to another device",
+      style: r
+    }, React.createElement(SyncIcon, null))), React.createElement("button", {
+      onClick: () => G(!0),
+      "aria-label": "Help and about",
+      title: "Help",
+      style: Object.assign({}, r, {
+        position: "absolute",
+        right: 12,
+        top: bt ? 7 : 14
+      })
+    }, React.createElement(HelpIcon, null)), bt ? React.createElement("div", {
+      style: {
+        padding: "0 54px"
+      }
+    }, React.createElement("div", {
+      onClick: () => mt("browse"),
+      title: "Back to Edinburgh Fringe home",
+      style: {
+        fontSize: 11,
+        fontWeight: 800,
+        letterSpacing: 2,
+        textTransform: "uppercase",
+        color: C.txt2,
+        cursor: "pointer",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis"
+      }
+    }, V ? "Fringe " : "Edinburgh Fringe ", SITE_YEAR), React.createElement("div", {
+      style: {
+        fontSize: V ? 21 : 26,
+        fontWeight: 900,
+        margin: "1px auto 0",
+        maxWidth: "100%",
+        background: "linear-gradient(90deg,var(--pink),var(--accent))",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        overflow: "hidden",
+        whiteSpace: "nowrap",
+        textOverflow: "ellipsis"
+      }
+    }, e)) : React.createElement(React.Fragment, null, React.createElement("div", {
+      style: {
+        fontSize: 12,
+        fontWeight: 800,
+        letterSpacing: 2,
+        textTransform: "uppercase",
+        color: C.txt2
+      }
+    }, "Edinburgh"), React.createElement("h1", {
+      style: {
+        fontSize: V ? 30 : 34,
+        fontWeight: 900,
+        margin: "2px 0 0",
+        background: "linear-gradient(90deg,var(--pink),var(--accent))",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent"
+      }
+    }, "FRINGE ", SITE_YEAR))), !V && React.createElement("div", {
+      role: "navigation",
+      "aria-label": "Sections",
+      style: {
+        display: "flex",
+        gap: 6,
+        justifyContent: "center",
+        flexWrap: "wrap",
+        marginBottom: 22
+      }
+    }, pe("browse", "Browse all", "\u{1F3AD}"), React.createElement("div", {
+      style: {
+        position: "relative"
+      },
+      onMouseEnter: function() {
+        ht(!0)
+      },
+      onMouseLeave: function() {
+        ht(!1)
+      },
+      onFocus: function() {
+        ht(!0)
+      },
+      onBlur: function(l) {
+        l.currentTarget.contains(l.relatedTarget) || ht(!1)
+      }
+    }, pe("planner", "Planner", "\u2728"), gn && React.createElement("div", {
+      style: {
+        position: "absolute",
+        top: "100%",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 90,
+        marginTop: 2,
+        background: C.card,
+        border: "1px solid " + C.border,
+        borderRadius: 10,
+        padding: 4,
+        minWidth: 172,
+        boxShadow: "0 10px 28px rgba(0,0,0,0.45)"
+      }
+    }, React.createElement("button", {
+      onClick: function() {
+        mt("proposals"), ht(!1), Ie(!1)
+      },
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        width: "100%",
+        padding: "9px 12px",
+        borderRadius: 8,
+        border: "none",
+        cursor: "pointer",
+        fontSize: 13,
+        fontWeight: 800,
+        textAlign: "left",
+        background: Q === "proposals" ? "rgba(168,85,247,0.18)" : "transparent",
+        color: Q === "proposals" ? "#c084fc" : C.txt2
+      }
+    }, "\u{1F4CB} Pitch a Day!"))), pe("plan", "Wishlist", "\u{1F49C}"), React.createElement("div", {
+      style: {
+        position: "relative"
+      },
+      onMouseEnter: function() {
+        vt(!0)
+      },
+      onMouseLeave: function() {
+        vt(!1)
+      },
+      onFocus: function() {
+        vt(!0)
+      },
+      onBlur: function(l) {
+        l.currentTarget.contains(l.relatedTarget) || vt(!1)
+      }
+    }, pe("booked", "Bookings", "\u{1F3AB}"), hn && React.createElement("div", {
+      style: {
+        position: "absolute",
+        top: "100%",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 90,
+        marginTop: 2,
+        background: C.card,
+        border: "1px solid " + C.border,
+        borderRadius: 10,
+        padding: 4,
+        minWidth: 150,
+        boxShadow: "0 10px 28px rgba(0,0,0,0.45)"
+      }
+    }, React.createElement("button", {
+      onClick: function() {
+        mt("stats"), vt(!1), Ie(!1)
+      },
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        width: "100%",
+        padding: "9px 12px",
+        borderRadius: 8,
+        border: "none",
+        cursor: "pointer",
+        fontSize: 13,
+        fontWeight: 800,
+        textAlign: "left",
+        background: Q === "stats" ? "rgba(168,85,247,0.18)" : "transparent",
+        color: Q === "stats" ? "#c084fc" : C.txt2
+      }
+    }, "\u{1F4CA} Stats"))), pe("calendar", "Calendar", "\u{1F4C5}"), pe("map", "Map", "\u{1F5FA}\uFE0F")))
+  }(), dt && React.createElement("div", {
+    style: {
+      maxWidth: 560,
+      margin: "14px auto",
+      background: "rgba(168,85,247,0.14)",
+      border: "1px solid " + C.accent,
+      borderRadius: 12,
+      padding: "12px 16px",
+      textAlign: "center"
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 14,
+      color: C.txt
+    }
+  }, "Import ", React.createElement("b", null, dt.codes.length), " shows", Object.keys(dt.notes).length ? " + notes" : "", " from another device to this browser?"), React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      justifyContent: "center",
+      marginTop: 10
+    }
+  }, React.createElement("button", {
+    onClick: yn,
+    style: {
+      padding: "8px 16px",
+      borderRadius: 10,
+      border: "none",
+      background: C.accent,
+      color: "#fff",
+      fontWeight: 800,
+      cursor: "pointer"
+    }
+  }, "Import to this device"), React.createElement("button", {
+    onClick: () => {
+      Ct(null);
+      try {
+        history.replaceState(null, "", window.location.pathname)
+      } catch {}
+    },
+    style: {
+      padding: "8px 16px",
+      borderRadius: 10,
+      border: "1px solid " + C.border,
+      background: "transparent",
+      color: C.txt2,
+      fontWeight: 700,
+      cursor: "pointer"
+    }
+  }, "Not now"))), React.createElement("div", {
+    id: "main",
+    tabIndex: -1,
+    style: {
+      outline: "none",
+      height: V ? 14 : 8
+    }
+  }), Q === "stats" && function() {
+    var e = {};
+    (n || []).forEach(function(z) {
+      e[z.code] = z
+    });
+    var r = Object.keys(p).map(function(z) {
+        return {
+          code: z,
+          rec: p[z],
+          s: e[z]
+        }
+      }).filter(function(z) {
+        return z.s
+      }),
+      l = r.length,
+      i = r.reduce(function(z, L) {
+        return z + (typeof L.s.priceFull == "number" ? L.s.priceFull : 0)
+      }, 0),
+      u = r.reduce(function(z, L) {
+        var ce = timeToMin_(L.rec.start || L.s.startStr),
+          be = timeToMin_(L.rec.end || L.s.endStr),
+          Ot = ce != null && be != null && be > ce ? be - ce : L.s.duration || 0;
+        return z + Ot
+      }, 0),
+      c = {};
+    r.forEach(function(z) {
+      z.rec.date && (c[z.rec.date] = (c[z.rec.date] || 0) + 1)
+    });
+    var T = Object.keys(c),
+      B = T.slice().sort(function(z, L) {
+        return c[L] - c[z]
+      })[0],
+      j = r.filter(function(z) {
+        return typeof z.s.priceFull == "number" && z.s.priceFull > 0
+      }).sort(function(z, L) {
+        return L.s.priceFull - z.s.priceFull
+      }),
+      H = j[0],
+      m = j[j.length - 1],
+      re = r.filter(function(z) {
+        return !z.s.priceFull
+      }).length,
+      ge = Me.filter(function(z) {
+        return !p[z.code]
+      }),
+      ke = ge.reduce(function(z, L) {
+        return z + (typeof L.priceFull == "number" ? L.priceFull : 0)
+      }, 0),
+      he = ge.reduce(function(z, L) {
+        return z + (L.duration || 0)
+      }, 0),
+      ve = {},
+      Ce = {};
+    r.forEach(function(z) {
+      z.s.genre && (ve[z.s.genre] = (ve[z.s.genre] || 0) + 1), z.s.venue && (Ce[z.s.venue] = (Ce[z.s.venue] || 0) + 1)
+    });
+    var Fe = function(z, L) {
+        return Object.keys(z).map(function(ce) {
+          return {
+            key: ce,
+            v: z[ce]
+          }
+        }).sort(function(ce, be) {
+          return be.v - ce.v
+        }).slice(0, L || 6)
+      },
+      ze = function(z) {
+        var L = new Date(z + "T12:00:00");
+        return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][L.getDay()] + " " + dateRange(z, z)
+      },
+      le = function(z, L, ce) {
+        return React.createElement("div", {
+          style: {
+            background: C.card,
+            border: "1px solid " + C.border,
+            borderRadius: 14,
+            padding: "16px 18px",
+            flex: "1 1 130px",
+            minWidth: 0
+          }
+        }, React.createElement("div", {
+          style: {
+            fontSize: 26,
+            fontWeight: 900,
+            color: ce || C.accent,
+            lineHeight: 1.1
+          }
+        }, z), React.createElement("div", {
+          style: {
+            fontSize: 12,
+            color: C.txt2,
+            fontWeight: 700,
+            marginTop: 3
+          }
+        }, L))
+      },
+      je = function(z, L, ce) {
+        return React.createElement("div", {
+          style: {
+            marginBottom: 18
+          }
+        }, React.createElement("div", {
+          style: {
+            fontSize: 12,
+            color: C.txt3,
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: .5,
+            marginBottom: 8
+          }
+        }, L), z.map(function(be) {
+          return React.createElement("div", {
+            key: be.key,
+            style: {
+              marginBottom: 6
+            }
+          }, React.createElement("div", {
+            style: {
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: 13,
+              marginBottom: 2
+            }
+          }, React.createElement("span", {
+            style: {
+              color: C.txt,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              paddingRight: 8
+            }
+          }, be.key), React.createElement("span", {
+            style: {
+              color: C.txt2,
+              fontWeight: 800,
+              flexShrink: 0
+            }
+          }, be.v)), React.createElement("div", {
+            style: {
+              height: 7,
+              borderRadius: 4,
+              background: "rgba(255,255,255,0.08)"
+            }
+          }, React.createElement("div", {
+            style: {
+              height: 7,
+              borderRadius: 4,
+              width: Math.round(be.v / (ce || 1) * 100) + "%",
+              background: "linear-gradient(90deg,var(--pink),var(--accent))"
+            }
+          })))
+        }))
+      };
+    return l === 0 && Me.length === 0 ? React.createElement("div", {
+      style: {
+        textAlign: "center",
+        color: C.txt3,
+        fontSize: 15,
+        padding: "50px 12px"
+      }
+    }, "No stats yet \u2014 mark some shows as ", React.createElement("b", {
+      style: {
+        color: C.txt2
+      }
+    }, "booked"), " and they will add up here.") : React.createElement("div", null, React.createElement("p", {
+      style: {
+        fontSize: 13,
+        color: C.txt2,
+        margin: "0 0 14px"
+      }
+    }, "Your Fringe by the numbers, from your booked shows."), React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 10,
+        flexWrap: "wrap",
+        marginBottom: 18
+      }
+    }, le(l, "Shows booked"), le(T.length, "Days out"), le("\xA3" + Math.round(i * 100) / 100, "Total spend", "#34d399"), le(Math.floor(u / 60) + "h " + u % 60 + "m", "Hours of shows"), le(Me.length, "On wishlist", "#c084fc")), React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 10,
+        flexWrap: "wrap",
+        marginBottom: 18
+      }
+    }, B && React.createElement("div", {
+      style: {
+        background: C.card,
+        border: "1px solid " + C.border,
+        borderRadius: 14,
+        padding: "14px 16px",
+        flex: "1 1 200px"
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: C.txt3,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: .5
+      }
+    }, "Busiest day"), React.createElement("div", {
+      style: {
+        fontSize: 16,
+        fontWeight: 800,
+        marginTop: 3
+      }
+    }, ze(B)), React.createElement("div", {
+      style: {
+        fontSize: 12,
+        color: C.txt2
+      }
+    }, c[B], " shows")), H && React.createElement("div", {
+      style: {
+        background: C.card,
+        border: "1px solid " + C.border,
+        borderRadius: 14,
+        padding: "14px 16px",
+        flex: "1 1 200px"
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: C.txt3,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: .5
+      }
+    }, "Most expensive"), React.createElement("div", {
+      style: {
+        fontSize: 15,
+        fontWeight: 800,
+        marginTop: 3,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      }
+    }, H.s.title), React.createElement("div", {
+      style: {
+        fontSize: 12,
+        color: C.txt2
+      }
+    }, priceLabel(H.s.priceFull))), m && m !== H && React.createElement("div", {
+      style: {
+        background: C.card,
+        border: "1px solid " + C.border,
+        borderRadius: 14,
+        padding: "14px 16px",
+        flex: "1 1 200px"
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: C.txt3,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: .5
+      }
+    }, "Cheapest paid"), React.createElement("div", {
+      style: {
+        fontSize: 15,
+        fontWeight: 800,
+        marginTop: 3,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      }
+    }, m.s.title), React.createElement("div", {
+      style: {
+        fontSize: 12,
+        color: C.txt2
+      }
+    }, priceLabel(m.s.priceFull))), re > 0 && React.createElement("div", {
+      style: {
+        background: C.card,
+        border: "1px solid " + C.border,
+        borderRadius: 14,
+        padding: "14px 16px",
+        flex: "1 1 200px"
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: C.txt3,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: .5
+      }
+    }, "Free shows"), React.createElement("div", {
+      style: {
+        fontSize: 22,
+        fontWeight: 900,
+        marginTop: 3,
+        color: "#34d399"
+      }
+    }, re))), ge.length > 0 && React.createElement("div", {
+      style: {
+        background: "rgba(168,85,247,0.08)",
+        border: "1px solid rgba(168,85,247,0.28)",
+        borderRadius: 14,
+        padding: "14px 16px",
+        marginBottom: 18
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 12,
+        color: "#c084fc",
+        fontWeight: 800,
+        textTransform: "uppercase",
+        letterSpacing: .5,
+        marginBottom: 10
+      }
+    }, "If you book your wishlist"), React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 22,
+        flexWrap: "wrap"
+      }
+    }, React.createElement("div", null, React.createElement("div", {
+      style: {
+        fontSize: 22,
+        fontWeight: 900
+      }
+    }, "+\xA3", Math.round(ke * 100) / 100), React.createElement("div", {
+      style: {
+        fontSize: 12,
+        color: C.txt2
+      }
+    }, ge.length, " more show", ge.length === 1 ? "" : "s")), React.createElement("div", null, React.createElement("div", {
+      style: {
+        fontSize: 22,
+        fontWeight: 900
+      }
+    }, "+", Math.floor(he / 60), "h ", he % 60, "m"), React.createElement("div", {
+      style: {
+        fontSize: 12,
+        color: C.txt2
+      }
+    }, "more show time")), React.createElement("div", null, React.createElement("div", {
+      style: {
+        fontSize: 22,
+        fontWeight: 900,
+        color: "#34d399"
+      }
+    }, "\xA3", Math.round((i + ke) * 100) / 100), React.createElement("div", {
+      style: {
+        fontSize: 12,
+        color: C.txt2
+      }
+    }, "grand total")))), Object.keys(ve).length > 0 && je(Fe(ve, 6), "By genre", l), Object.keys(Ce).length > 0 && je(Fe(Ce, 6), "Top venues", l))
+  }(), Q === "planner" && React.createElement(PlannerView, {
+    avail: zt,
+    setAvail: fn,
+    planShows: Me,
+    shows: n,
+    isMobile: V,
+    onAddToBookings: b
+  }), Q === "browse" && React.createElement(React.Fragment, null, function() {
+    var e = function(i) {
+        return {
+          padding: "7px 12px",
+          border: "none",
+          cursor: "pointer",
+          fontSize: 12,
+          fontWeight: 800,
+          background: i ? C.accent : "transparent",
+          color: i ? "#fff" : C.txt2
+        }
+      },
+      r = D === "table" ? _ : v,
+      l = [
+        ["artist", "Artist"],
+        ["venue", "Venue"],
+        ["dates", "Dates"],
+        ["time", "Start / end / duration"],
+        ["price", "Price"],
+        ["genre", "Genre & tags"]
+      ];
+    return React.createElement("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 8,
+        flexWrap: "wrap",
+        marginBottom: 10
+      }
+    }, React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 8,
+        alignItems: "center",
+        flexWrap: "wrap"
+      }
+    }, React.createElement("span", {
+      style: {
+        fontSize: 13,
+        color: C.txt3
+      }
+    }, Xe.length.toLocaleString(), " shows", Xe.length > st ? " \xB7 showing " + Math.min(st, Xe.length) : "")), React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 8,
+        alignItems: "center",
+        flexWrap: "wrap"
+      }
+    }, null, React.createElement("div", {
+      style: {
+        display: "inline-flex",
+        borderRadius: 8,
+        border: "1px solid " + C.border,
+        overflow: "hidden"
+      }
+    }, React.createElement("button", {
+      onClick: function() {
+        J("cards")
+      },
+      style: e(D === "cards")
+    }, V ? "\u25A6" : "\u25A6 Cards"), React.createElement("button", {
+      onClick: function() {
+        J("table")
+      },
+      style: e(D === "table")
+    }, V ? "\u25A4" : "\u25A4 Table"), React.createElement("button", {
+      onClick: function() {
+        J("tiles")
+      },
+      style: e(D === "tiles")
+    }, V ? "\u229E" : "\u229E Tiles")), React.createElement("div", {
+      style: {
+        position: "relative"
+      }
+    }, React.createElement("button", {
+      onClick: function() {
+        ct(function(i) {
+          return !i
+        })
+      },
+      style: {
+        padding: "7px 12px",
+        borderRadius: 8,
+        border: "1px solid " + C.border,
+        background: ee ? "rgba(168,85,247,0.15)" : "transparent",
+        color: C.txt2,
+        fontSize: 12,
+        fontWeight: 800,
+        cursor: "pointer"
+      }
+    }, "\u2699 Info"), ee && React.createElement("div", {
+      style: {
+        position: "absolute",
+        right: 0,
+        top: "100%",
+        marginTop: 4,
+        zIndex: 60,
+        background: C.card,
+        border: "1px solid " + C.border,
+        borderRadius: 10,
+        padding: "8px 12px",
+        minWidth: 180,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.5)"
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: C.txt3,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        marginBottom: 4
+      }
+    }, "Show on each card"), l.map(function(i) {
+      return React.createElement("label", {
+        key: i[0],
+        style: {
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "4px 0",
+          fontSize: 13,
+          color: C.txt,
+          cursor: "pointer"
+        }
+      }, React.createElement("input", {
+        type: "checkbox",
+        checked: ue[i[0]] !== !1,
+        onChange: function(u) {
+          var c = u.target.checked;
+          Re(function(T) {
+            var B = Object.assign({}, T);
+            return B[i[0]] = c, B
+          })
+        }
+      }), i[1])
+    }))), React.createElement("select", {
+      "aria-label": "Number of shows to display",
+      value: r,
+      onChange: function(i) {
+        var u = Number(i.target.value);
+        D === "table" ? fe(u) : A(u), kt(u)
+      },
+      style: {
+        padding: "7px 10px",
+        borderRadius: 8,
+        border: "1px solid " + C.border,
+        background: "rgba(255,255,255,0.06)",
+        color: C.txt,
+        fontSize: 12,
+        fontWeight: 700,
+        colorScheme: "dark"
+      }
+    }, [20, 60, 120, 200].map(function(i) {
+      return React.createElement("option", {
+        key: i,
+        value: i
+      }, i, " shows")
+    }))))
+  }(), D === "tiles" ? React.createElement(Tiles, {
+    isMobile: V,
+    list: Xe.slice(0, st),
+    plan: d,
+    booked: p,
+    proposals: X,
+    fields: ue,
+    onWish: Se,
+    onBook: Be,
+    onProp: wt,
+    onOpen: de
+  }) : D === "table" ? React.createElement(ShowTable, {
+    rows: Xe,
+    limit: st,
+    cardFields: ue,
+    sortKey: Qe,
+    sortDir: $e,
+    setSortKey: it,
+    setSortDir: at,
+    plan: d,
+    booked: p,
+    toggle: Se,
+    onBookClick: Be,
+    onOpen: de
+  }) : React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: V ? "1fr" : "repeat(auto-fill,minmax(260px,1fr))",
+      gridAutoRows: "1fr",
+      gap: 12
+    }
+  }, Xe.slice(0, st).map(e => React.createElement(ShowCard, {
+    key: e.code,
+    s: e,
+    inPlan: d.has(e.code),
+    isBk: !!p[e.code],
+    hasNote: !!se[e.code],
+    fields: ue,
+    onWish: () => Se(e.code),
+    onBook: () => Be(e),
+    onOpen: () => de(e)
+  }))), Xe.length > st && React.createElement("div", {
+    style: {
+      textAlign: "center",
+      marginTop: 18
+    }
+  }, React.createElement("button", {
+    onClick: () => kt(e => e + (D === "table" ? _ : v)),
+    style: {
+      padding: "10px 22px",
+      borderRadius: 12,
+      border: "1px solid " + C.border,
+      background: C.card,
+      color: C.txt,
+      fontSize: 14,
+      fontWeight: 800,
+      cursor: "pointer"
+    }
+  }, "Show more"))), Q === "plan" && React.createElement(React.Fragment, null, React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 14,
+      flexWrap: "wrap"
+    }
+  }, React.createElement("p", {
+    style: {
+      fontSize: 15,
+      color: C.txt2,
+      margin: 0
+    }
+  }, "You have ", React.createElement("b", {
+    style: {
+      color: C.txt,
+      fontWeight: 800
+    }
+  }, d.size), " show", d.size === 1 ? "" : "s", " in your wishlist."), d.size > 0 && React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      flexWrap: "wrap",
+      alignItems: "center"
+    }
+  }, React.createElement("div", {
+    style: {
+      display: "inline-flex",
+      borderRadius: 8,
+      border: "1px solid " + C.border,
+      overflow: "hidden"
+    }
+  }, React.createElement("button", {
+    onClick: function() {
+      Tt("cards")
+    },
+    style: {
+      padding: "7px 12px",
+      border: "none",
+      cursor: "pointer",
+      fontSize: 12,
+      fontWeight: 800,
+      background: Ke === "cards" ? C.accent : "transparent",
+      color: Ke === "cards" ? "#fff" : C.txt2
+    }
+  }, V ? "\u25A6" : "\u25A6 Cards"), React.createElement("button", {
+    onClick: function() {
+      Tt("table")
+    },
+    style: {
+      padding: "7px 12px",
+      border: "none",
+      cursor: "pointer",
+      fontSize: 12,
+      fontWeight: 800,
+      background: Ke === "table" ? C.accent : "transparent",
+      color: Ke === "table" ? "#fff" : C.txt2
+    }
+  }, V ? "\u25A4" : "\u25A4 Table"), React.createElement("button", {
+    onClick: function() {
+      Tt("tiles")
+    },
+    style: {
+      padding: "7px 12px",
+      border: "none",
+      cursor: "pointer",
+      fontSize: 12,
+      fontWeight: 800,
+      background: Ke === "tiles" ? C.accent : "transparent",
+      color: Ke === "tiles" ? "#fff" : C.txt2
+    }
+  }, V ? "\u229E" : "\u229E Tiles")))), React.createElement("div", {
+    style: {
+      marginBottom: 14
+    }
+  }, React.createElement("button", {
+    onClick: () => pt(e => !e),
+    style: {
+      padding: "9px 16px",
+      borderRadius: 10,
+      border: "1px dashed " + C.border,
+      background: ne ? "rgba(168,85,247,0.12)" : "transparent",
+      color: ne ? "#c084fc" : C.txt2,
+      fontSize: 13,
+      fontWeight: 800,
+      cursor: "pointer",
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6
+    }
+  }, ne ? "\u2713 Done" : "\u2795 Add a show"), ne && React.createElement("div", {
+    style: {
+      marginTop: 8
+    }
+  }, React.createElement("input", {
+    autoFocus: !0,
+    value: Te,
+    onChange: e => Oe(e.target.value),
+    "aria-label": "Search all shows by name",
+    placeholder: "Search all shows by name\u2026",
+    style: {
+      width: "100%",
+      maxWidth: 420,
+      boxSizing: "border-box",
+      padding: "9px 11px",
+      borderRadius: 10,
+      border: "1px solid " + C.border,
+      background: "rgba(255,255,255,0.06)",
+      color: C.txt,
+      fontSize: 13,
+      outline: "none"
+    }
+  }), Te.trim().length >= 2 && React.createElement("div", {
+    style: {
+      marginTop: 6,
+      maxWidth: 420,
+      border: "1px solid " + C.border,
+      borderRadius: 10,
+      overflow: "hidden",
+      maxHeight: 320,
+      overflowY: "auto"
+    }
+  }, (n || []).filter(function(e) {
+    return e.title.toLowerCase().includes(Te.trim().toLowerCase())
+  }).slice(0, 20).map(function(e) {
+    var r = d.has(e.code);
+    return React.createElement("div", {
+      key: e.code,
+      onClick: function() {
+        Se(e.code)
+      },
+      style: {
+        padding: "9px 11px",
+        cursor: "pointer",
+        fontSize: 13,
+        borderTop: "1px solid " + C.border,
+        display: "flex",
+        alignItems: "center",
+        gap: 9,
+        background: r ? "rgba(52,211,153,0.12)" : "transparent"
+      }
+    }, React.createElement("span", {
+      style: {
+        fontWeight: 800,
+        fontSize: 15,
+        color: r ? "#34d399" : C.accent,
+        width: 14,
+        textAlign: "center",
+        flexShrink: 0
+      }
+    }, r ? "\u2713" : "+"), React.createElement("span", {
+      style: {
+        flex: 1,
+        minWidth: 0
+      }
+    }, React.createElement("div", {
+      style: {
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+        fontWeight: 600
+      }
+    }, e.title), React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: C.txt3,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      }
+    }, e.venue, e.startStr ? " \xB7 " + e.startStr : "", priceLabel(e.priceFull) ? " \xB7 " + priceLabel(e.priceFull) : "")))
+  })))), Me.length === 0 ? React.createElement("div", {
+    style: {
+      textAlign: "center",
+      color: C.txt3,
+      fontSize: 15,
+      padding: "50px 12px"
+    }
+  }, "Nothing wishlisted yet \u2014 head to ", React.createElement("b", {
+    style: {
+      color: C.txt2
+    }
+  }, "Browse all"), " and tap ", React.createElement("b", {
+    style: {
+      color: C.txt2
+    }
+  }, "+ Wishlist"), ".") : Ke === "tiles" ? React.createElement(Tiles, {
+    isMobile: V,
+    list: Me,
+    plan: d,
+    booked: p,
+    proposals: X,
+    fields: ue,
+    onWish: Se,
+    onBook: Be,
+    onProp: wt,
+    onOpen: de
+  }) : Ke === "table" ? React.createElement(ShowTable, {
+    rows: Me,
+    cardFields: {},
+    sortKey: Qe,
+    sortDir: $e,
+    setSortKey: it,
+    setSortDir: at,
+    plan: d,
+    booked: p,
+    toggle: Se,
+    onBookClick: Be,
+    onOpen: de
+  }) : React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: V ? "1fr" : "repeat(auto-fill,minmax(260px,1fr))",
+      gridAutoRows: "1fr",
+      gap: 12
+    }
+  }, Me.map(e => React.createElement(ShowCard, {
+    key: e.code,
+    s: e,
+    inPlan: !0,
+    isBk: !!p[e.code],
+    hasNote: !!se[e.code],
+    onWish: () => Se(e.code),
+    onBook: () => Be(e),
+    onOpen: () => de(e)
+  })))), Q === "map" && function() {
+    var e = {};
+    (n || []).forEach(function(i) {
+      e[i.code] = i
+    });
+    var r;
+    K === "wishlist" ? r = Me : K === "booked" ? r = Object.keys(p).map(function(i) {
+      return e[i]
+    }).filter(Boolean) : r = Array.from(new Set([...d, ...Object.keys(p)])).map(function(i) {
+      return e[i]
+    }).filter(Boolean);
+    var l = function(i, u) {
+      return React.createElement("button", {
+        key: i,
+        onClick: function() {
+          x(i)
+        },
+        style: {
+          padding: "6px 14px",
+          border: "none",
+          cursor: "pointer",
+          fontSize: 12,
+          fontWeight: 800,
+          background: K === i ? C.accent : "transparent",
+          color: K === i ? "#fff" : C.txt2
+        }
+      }, u)
+    };
+    return React.createElement(React.Fragment, null, React.createElement("div", {
+      style: {
+        display: "flex",
+        justifyContent: "center",
+        marginBottom: 10
+      }
+    }, React.createElement("div", {
+      style: {
+        display: "inline-flex",
+        borderRadius: 8,
+        border: "1px solid " + C.border,
+        overflow: "hidden"
+      }
+    }, l("booked", "\u{1F39F} Booked"), l("wishlist", "\u2661 Wishlist"), l("all", "All"))), React.createElement(MapView, {
+      shows: r,
+      isMobile: V
+    }))
+  }(), Q === "booked" && function() {
+    var e = {};
+    (n || []).forEach(function(u) {
+      e[u.code] = u
+    });
+    var r = Object.keys(p).map(function(u) {
+        return {
+          code: u,
+          rec: p[u],
+          s: e[u]
+        }
+      }).filter(function(u) {
+        return u.s && an(u.s)
+      }),
+      l = {};
+    r.forEach(function(u) {
+      var c = u.rec.date || "No date";
+      (l[c] = l[c] || []).push(u)
+    });
+    var i = Object.keys(l).sort();
+    return React.createElement("div", null, React.createElement("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 8,
+        flexWrap: "wrap",
+        margin: "0 0 12px"
+      }
+    }, React.createElement("p", {
+      style: {
+        fontSize: 15,
+        color: C.txt2,
+        margin: 0
+      }
+    }, "You have ", React.createElement("b", {
+      style: {
+        color: C.txt,
+        fontWeight: 800
+      }
+    }, Object.keys(p).length), " show", Object.keys(p).length === 1 ? "" : "s", " booked."), React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 8,
+        flexWrap: "wrap"
+      }
+    }, React.createElement("button", {
+      onClick: function() {
+        downloadAllICS_(e, p, y)
+      },
+      title: "Export booked (confirmed) + wishlist-with-a-date (tentative) as one .ics",
+      style: {
+        padding: "7px 14px",
+        borderRadius: 8,
+        border: "1px solid " + C.border,
+        background: "transparent",
+        color: C.txt2,
+        fontSize: 13,
+        fontWeight: 800,
+        cursor: "pointer"
+      }
+    }, "\u{1F4C5} Export all"), null)), i.length === 0 ? React.createElement("div", {
+      style: {
+        textAlign: "center",
+        color: C.txt3,
+        fontSize: 15,
+        padding: "46px 12px"
+      }
+    }, "No bookings yet. On any show tap ", React.createElement("b", {
+      style: {
+        color: C.txt2
+      }
+    }, "\u{1F39F} Book"), " and confirm the date.") : i.map(function(u) {
+      return React.createElement("div", {
+        key: u,
+        style: {
+          marginBottom: 18
+        }
+      }, React.createElement("div", {
+        style: {
+          display: "flex",
+          alignItems: "center",
+          gap: 11,
+          margin: "0 2px 10px"
+        }
+      }, u === "No date" ? React.createElement("span", {
+        style: {
+          fontSize: 16,
+          fontWeight: 800,
+          color: C.txt
+        }
+      }, "No date set") : function() {
+        var c = new Date(u + "T12:00:00"),
+          T = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+          B = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        return React.createElement(React.Fragment, null, React.createElement("span", {
+          style: {
+            fontSize: 32,
+            fontWeight: 900,
+            lineHeight: 1,
+            background: "linear-gradient(90deg,var(--pink),var(--accent))",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent"
+          }
+        }, c.getDate()), React.createElement("span", {
+          style: {
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: 1,
+            textTransform: "uppercase",
+            color: C.txt2,
+            lineHeight: 1.25
+          }
+        }, T[c.getDay()], React.createElement("br", null), B[c.getMonth()]))
+      }(), React.createElement("span", {
+        style: {
+          marginLeft: "auto",
+          fontSize: 11,
+          fontWeight: 800,
+          color: C.txt3,
+          background: "rgba(255,255,255,0.06)",
+          borderRadius: 20,
+          padding: "3px 10px"
+        }
+      }, l[u].length, " show", l[u].length > 1 ? "s" : "")), React.createElement("div", {
+        style: {
+          display: "flex",
+          flexDirection: "column",
+          gap: 8
+        }
+      }, function() {
+        var c = l[u].slice().sort(function(m, re) {
+            return (timeToMin_(m.rec.start || m.s.startStr) || 0) - (timeToMin_(re.rec.start || re.s.startStr) || 0)
+          }),
+          T = function(m) {
+            return timeToMin_(m.rec.start || m.s.startStr)
+          },
+          B = function(m) {
+            var re = timeToMin_(m.rec.end || m.s.endStr);
+            if (re == null) {
+              var ge = T(m);
+              re = ge != null ? ge + (m.s.duration || 60) : null
+            }
+            return re
+          },
+          j = [],
+          H = null;
+        return c.forEach(function(m, re) {
+          var ge = T(m),
+            ke = function(z) {
+              if (z == null) return {
+                k: "tbc",
+                label: "Time TBC",
+                ic: "\u{1F550}"
+              };
+              var L = Math.floor(z % 1440 / 60);
+              return L < 12 ? {
+                k: "morning",
+                label: "Morning",
+                ic: "\u{1F305}"
+              } : L < 17 ? {
+                k: "afternoon",
+                label: "Afternoon",
+                ic: "\u2600\uFE0F"
+              } : L < 22 ? {
+                k: "evening",
+                label: "Evening",
+                ic: "\u{1F306}"
+              } : {
+                k: "late",
+                label: "Late",
+                ic: "\u{1F319}"
+              }
+            }(ge);
+          ke.k !== H && (H = ke.k, j.push(React.createElement("div", {
+            key: "tod" + re,
+            style: {
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              margin: "8px 2px 2px"
+            }
+          }, React.createElement("span", {
+            style: {
+              fontSize: 14
+            }
+          }, ke.ic), React.createElement("span", {
+            style: {
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: 1,
+              textTransform: "uppercase",
+              color: C.txt3
+            }
+          }, ke.label), React.createElement("span", {
+            style: {
+              flex: 1,
+              height: 1,
+              background: C.border
+            }
+          }))));
+          var he = [m.s.venueAddr, m.s.venuePostcode].filter(Boolean).join(", ");
+          if (j.push(React.createElement("div", {
+              key: m.code,
+              style: {
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "11px 13px",
+                borderRadius: 10,
+                background: C.card,
+                border: "1px solid " + C.border,
+                borderLeft: "4px solid " + orgColor(m.s.venue)
+              }
+            }, React.createElement("div", {
+              onClick: function() {
+                de(m.s)
+              },
+              style: {
+                flex: 1,
+                minWidth: 0,
+                cursor: "pointer"
+              }
+            }, React.createElement("div", {
+              style: {
+                fontWeight: 800,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }
+            }, m.s.title), React.createElement("div", {
+              style: {
+                fontSize: 12,
+                color: C.txt2,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }
+            }, "\u{1F550} ", m.rec.start || m.s.startStr || "?", m.rec.end || m.s.endStr ? "\u2013" + (m.rec.end || m.s.endStr) : "", " \xB7 ", m.s.venue, m.s.venueCode ? " (#" + m.s.venueCode + ")" : "", priceLabel(m.s.priceFull) ? " \xB7 " + priceLabel(m.s.priceFull) : ""), he && React.createElement("a", {
+              href: mapsUrl(m.s),
+              target: "_blank",
+              rel: "noopener noreferrer",
+              onClick: function(z) {
+                z.stopPropagation()
+              },
+              "aria-label": m.s.venue + " on Google Maps (opens in a new tab)",
+              style: {
+                display: "block",
+                fontSize: 11,
+                color: C.accent,
+                marginTop: 2,
+                textDecoration: "none",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }
+            }, "\u{1F4CD} ", he, " \u2197")), React.createElement("div", {
+              style: {
+                display: "flex",
+                gap: 6,
+                flexWrap: "wrap",
+                justifyContent: "flex-end",
+                alignItems: "center",
+                flexShrink: 0
+              }
+            }, React.createElement("button", {
+              onClick: function() {
+                Se(m.code)
+              },
+              "aria-label": d.has(m.code) ? "Remove " + (m.s.title || "this show") + " from your wishlist" : "Add " + (m.s.title || "this show") + " to your wishlist",
+              title: d.has(m.code) ? "On your wishlist" : "Add to wishlist",
+              style: {
+                width: 40,
+                height: 40,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 8,
+                border: "1px solid " + (d.has(m.code) ? "#34d399" : C.border),
+                background: d.has(m.code) ? "rgba(52,211,153,0.16)" : "transparent",
+                color: d.has(m.code) ? "#34d399" : C.txt2,
+                fontSize: 14,
+                cursor: "pointer"
+              }
+            }, d.has(m.code) ? "\u2665" : "\u2661"), React.createElement("button", {
+              onClick: function() {
+                Be(m.s)
+              },
+              "aria-label": "Edit booking date and time for " + (m.s.title || "this show"),
+              title: "Edit booking date/time",
+              style: {
+                width: 40,
+                height: 40,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 8,
+                border: "1px solid #93c5fd",
+                background: "rgba(96,165,250,0.18)",
+                color: "#93c5fd",
+                fontSize: 13,
+                cursor: "pointer"
+              }
+            }, "\u{1F39F}"), React.createElement("select", {
+              value: "",
+              onChange: function(z) {
+                z.target.value && wt(z.target.value, m.code)
+              },
+              "aria-label": "Add to a proposal",
+              title: "Add to a proposal",
+              style: {
+                width: 40,
+                height: 40,
+                padding: 0,
+                textAlign: "center",
+                textAlignLast: "center",
+                borderRadius: 8,
+                border: "1px solid " + C.border,
+                background: "transparent",
+                color: C.txt2,
+                fontSize: 15,
+                colorScheme: "dark",
+                cursor: "pointer",
+                appearance: "none",
+                WebkitAppearance: "none",
+                MozAppearance: "none"
+              }
+            }, React.createElement("option", {
+              value: ""
+            }, "\u{1F4CB}"), X.map(function(z) {
+              return React.createElement("option", {
+                key: z.id,
+                value: z.id
+              }, z.title || "Untitled")
+            }), React.createElement("option", {
+              value: "__new"
+            }, "\uFF0B New")), m.s.website && React.createElement("a", {
+              href: m.s.website,
+              target: "_blank",
+              rel: "noopener noreferrer",
+              title: "View listing (opens in a new tab)",
+              "aria-label": "View " + (m.s.title || "this show") + " listing (opens in a new tab)",
+              style: {
+                width: 40,
+                height: 40,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 8,
+                border: "1px solid " + C.border,
+                color: C.txt2,
+                textDecoration: "none"
+              }
+            }, React.createElement(LinkIcon, null)), m.rec.date && React.createElement("button", {
+              onClick: function() {
+                downloadICS_(m.s, m.rec)
+              },
+              title: "Download calendar file (Apple / iCal .ics)",
+              "aria-label": "Download calendar file for " + (m.s.title || "this show"),
+              style: {
+                width: 40,
+                height: 40,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 8,
+                border: "1px solid " + C.border,
+                background: "transparent",
+                color: C.txt2,
+                fontSize: 15,
+                cursor: "pointer"
+              }
+            }, "\u{1F4C5}"), m.rec.date && React.createElement("a", {
+              href: gcalUrl_(m.s, m.rec),
+              target: "_blank",
+              rel: "noopener noreferrer",
+              title: "Add to Google Calendar (opens in a new tab)",
+              "aria-label": "Add " + (m.s.title || "this show") + " to Google Calendar (opens in a new tab)",
+              style: {
+                width: 40,
+                height: 40,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 8,
+                border: "1px solid " + C.border,
+                background: "transparent",
+                color: C.txt2,
+                fontSize: 15,
+                textDecoration: "none"
+              }
+            }, "\u{1F5D3}\uFE0F"), React.createElement("button", {
+              onClick: function() {
+                $t(m.code)
+              },
+              "aria-label": "Remove " + (m.s.title || "this show") + " from your bookings",
+              title: "Remove booking",
+              style: {
+                background: "none",
+                border: "none",
+                color: C.txt3,
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer"
+              }
+            }, "\u2715")))), re < c.length - 1) {
+            var ve = B(m),
+              Ce = T(c[re + 1]),
+              Fe = walkMin_(m.s, c[re + 1].s),
+              ze = (Fe || 0) + 30;
+            if (ve != null && Ce != null) {
+              var le = Ce - ve,
+                je = le >= ze;
+              j.push(React.createElement("div", {
+                key: "gap" + re,
+                style: {
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "1px 14px",
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: je ? "#22c55e" : "#f87171"
+                }
+              }, React.createElement("span", {
+                style: {
+                  fontSize: 13,
+                  lineHeight: 1
+                }
+              }, "\u2195"), React.createElement("span", null, le < 0 ? "Overlaps by " + -le + " min" : le + " min between shows", Fe != null ? " \xB7 \u{1F6B6} " + Fe + "m to next venue" : "", je ? " \xB7 \u2713 comfortable" : " \xB7 \u26A0 tight (needs " + ze + "m)")))
+            }
+          }
+        }), j
+      }()))
+    }))
+  }(), Q === "calendar" && function() {
+    var e = {};
+    (n || []).forEach(function(F) {
+      e[F.code] = F
+    });
+    var r = function(F) {
+        var P = [];
+        return mapFilterCalOK("booked", E) && Object.keys(p).forEach(function(Z) {
+          var N = p[Z],
+            ie = e[Z];
+          ie && N.date === F && P.push(Object.assign({}, ie, {
+            startStr: N.start || ie.startStr,
+            endStr: N.end || ie.endStr,
+            wish: !1
+          }))
+        }), mapFilterCalOK("wishlist", E) && Object.keys(y).forEach(function(Z) {
+          var N = e[Z];
+          N && y[Z] === F && P.push(Object.assign({}, N, {
+            wish: !0
+          }))
+        }), P.sort(function(Z, N) {
+          return (timeToMin_(Z.startStr) || 0) - (timeToMin_(N.startStr) || 0)
+        }), P
+      },
+      l = function(F) {
+        var P = new Date(f + "T12:00:00");
+        P.setDate(P.getDate() + F * (O === "week" ? 7 : 1)), R(P.toISOString().slice(0, 10))
+      },
+      i = {
+        padding: "7px 11px",
+        borderRadius: 10,
+        border: "1px solid " + C.border,
+        background: "rgba(255,255,255,0.06)",
+        color: C.txt,
+        fontSize: 16,
+        cursor: "pointer",
+        lineHeight: 1
+      },
+      u = function(F, P) {
+        return React.createElement("button", {
+          key: F,
+          onClick: function() {
+            U(F)
+          },
+          style: {
+            padding: "6px 11px",
+            border: "none",
+            cursor: "pointer",
+            fontSize: 12,
+            fontWeight: 800,
+            background: E === F ? C.accent : "transparent",
+            color: E === F ? "#fff" : C.txt2
+          }
+        }, P)
+      },
+      c = function(F, P) {
+        return React.createElement("button", {
+          key: F,
+          onClick: function() {
+            M(F)
+          },
+          style: {
+            padding: "6px 12px",
+            border: "none",
+            cursor: "pointer",
+            fontSize: 12,
+            fontWeight: 800,
+            background: O === F ? C.accent : "transparent",
+            color: O === F ? "#fff" : C.txt2
+          }
+        }, P)
+      },
+      T = new Date(f + "T12:00:00"),
+      B = (T.getDay() + 6) % 7,
+      j = new Date(T);
+    j.setDate(T.getDate() - B);
+    for (var H = [], m = 0; m < 7; m++) {
+      var re = new Date(j);
+      re.setDate(j.getDate() + m), H.push(re.toISOString().slice(0, 10))
+    }
+    var ge = new Date().toISOString().slice(0, 10),
+      ke = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      he = O === "day" ? [f] : H,
+      ve = function(F) {
+        var P = timeToMin_(F);
+        return P == null ? null : (P < 300 && (P += 1440), P)
+      },
+      Ce = [],
+      Fe = [];
+    he.forEach(function(F) {
+      r(F).forEach(function(P) {
+        var Z = ve(P.startStr);
+        if (Z != null) {
+          Ce.push(Z);
+          var N = ve(P.endStr);
+          (N == null || N <= Z) && (N = Z + (P.duration || 60)), Fe.push(N)
+        }
+      })
+    });
+    var ze = 100,
+      le, je;
+    Ce.length ? (le = Math.floor((Math.min.apply(null, Ce) - 30) / 30) * 30, je = Math.ceil((Math.max.apply(null, Fe) + 30) / 30) * 30) : (le = 600, je = 1200);
+    var z = je - le,
+      L = z / 60 * ze,
+      ce = Math.round(z / 30),
+      be = V ? 86 : 0,
+      Ot = he.length > 1 ? 48 + he.length * (V ? 86 : 96) : void 0;
+    return React.createElement("div", null, React.createElement("div", {
+      style: {
+        display: "flex",
+        flexDirection: V ? "column" : "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+        marginBottom: 12,
+        flexWrap: "wrap"
+      }
+    }, React.createElement("div", {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        width: V ? "100%" : void 0
+      }
+    }, React.createElement("button", {
+      onClick: function() {
+        l(-1)
+      },
+      style: i
+    }, "\u2039"), V ? React.createElement("div", {
+      style: {
+        flex: 1,
+        textAlign: "center",
+        fontSize: 15,
+        fontWeight: 800,
+        color: C.txt
+      }
+    }, O === "day" ? ke[(new Date(f + "T12:00:00").getDay() + 6) % 7] + " " + dateRange(f, f) : dateRange(H[0], H[H.length - 1])) : React.createElement(React.Fragment, null, React.createElement("input", {
+      "aria-label": "Jump to date",
+      type: "date",
+      value: f,
+      onChange: function(F) {
+        R(F.target.value)
+      },
+      style: {
+        padding: "8px 10px",
+        borderRadius: 10,
+        border: "1px solid " + C.border,
+        background: "rgba(255,255,255,0.06)",
+        color: C.txt,
+        fontSize: 14,
+        colorScheme: "dark"
+      }
+    }), React.createElement("span", {
+      style: {
+        fontSize: 15,
+        fontWeight: 800,
+        color: C.txt,
+        marginLeft: 8
+      }
+    }, O === "day" ? ke[(new Date(f + "T12:00:00").getDay() + 6) % 7] + " " + dateRange(f, f) : dateRange(H[0], H[H.length - 1]))), React.createElement("button", {
+      onClick: function() {
+        l(1)
+      },
+      style: i
+    }, "\u203A")), React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 8,
+        flexWrap: "wrap"
+      }
+    }, React.createElement("div", {
+      style: {
+        display: "inline-flex",
+        borderRadius: 8,
+        border: "1px solid " + C.border,
+        overflow: "hidden"
+      }
+    }, c("week", "Week"), c("day", "Day")), React.createElement("div", {
+      style: {
+        display: "inline-flex",
+        borderRadius: 8,
+        border: "1px solid " + C.border,
+        overflow: "hidden"
+      }
+    }, u("all", "All"), u("booked", "\u{1F39F}"), u("wishlist", "\u2661")))), React.createElement("div", {
+      style: {
+        overflow: "auto",
+        WebkitOverflowScrolling: "touch",
+        position: "relative",
+        border: "1px solid " + C.border,
+        borderRadius: 12,
+        maxHeight: V ? "calc(100vh - 250px)" : "none"
+      }
+    }, React.createElement("div", {
+      style: {
+        minWidth: Ot,
+        position: "relative"
+      }
+    }, React.createElement("div", {
+      style: {
+        display: "grid",
+        gridTemplateColumns: "48px repeat(" + he.length + ",minmax(" + be + "px,1fr))",
+        position: "sticky",
+        top: 0,
+        zIndex: 20,
+        background: C.bg,
+        borderBottom: "1px solid " + C.border
+      }
+    }, React.createElement("div", {
+      style: {
+        position: "sticky",
+        left: 0,
+        zIndex: 21,
+        background: C.bg
+      }
+    }), he.map(function(F) {
+      var P = new Date(F + "T12:00:00"),
+        Z = F === ge;
+      return React.createElement("div", {
+        key: F,
+        onClick: function() {
+          R(F)
+        },
+        style: {
+          textAlign: "center",
+          padding: "6px 2px",
+          cursor: "pointer",
+          background: Z ? "rgba(168,85,247,0.15)" : C.bg,
+          borderRadius: Z ? "8px 8px 0 0" : 0
+        }
+      }, React.createElement("div", {
+        style: {
+          fontSize: 11,
+          fontWeight: 700,
+          color: Z ? "#c084fc" : C.txt3,
+          textTransform: "uppercase",
+          letterSpacing: .5
+        }
+      }, ke[(P.getDay() + 6) % 7]), React.createElement("div", {
+        style: {
+          fontSize: 18,
+          fontWeight: 800,
+          lineHeight: 1.3,
+          color: Z ? "#c084fc" : C.txt
+        }
+      }, P.getDate()))
+    })), React.createElement("div", {
+      style: {
+        display: "grid",
+        gridTemplateColumns: "48px repeat(" + he.length + ",minmax(" + be + "px,1fr))",
+        position: "relative",
+        height: L
+      }
+    }, React.createElement("div", {
+      style: {
+        position: "sticky",
+        left: 0,
+        zIndex: 10,
+        background: C.bg
+      }
+    }, Array.from({
+      length: ce + 1
+    }).map(function(F, P) {
+      var Z = le + P * 30,
+        N = Z >= 1440 ? Z - 1440 : Z,
+        ie = P % 2 === 1;
+      return React.createElement("div", {
+        key: P,
+        style: {
+          position: "absolute",
+          top: P * (ze / 2) - 7,
+          right: 6,
+          fontSize: ie ? 9 : 12,
+          fontWeight: ie ? 600 : 800,
+          color: ie ? C.txt3 : C.txt2,
+          lineHeight: 1,
+          whiteSpace: "nowrap"
+        }
+      }, ie ? ":30" : fmtMin_(N))
+    })), he.map(function(F) {
+      var P = r(F),
+        Z = F === ge;
+      return React.createElement("div", {
+        key: F,
+        style: {
+          position: "relative",
+          borderLeft: "1px solid rgba(255,255,255,0.05)",
+          height: L,
+          background: Z ? "rgba(168,85,247,0.05)" : "transparent"
+        }
+      }, Array.from({
+        length: ce
+      }).map(function(N, ie) {
+        return React.createElement("div", {
+          key: ie,
+          style: {
+            position: "absolute",
+            top: ie * (ze / 2),
+            left: 0,
+            right: 0,
+            height: 1,
+            background: ie % 2 === 0 ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.035)"
+          }
+        })
+      }), P.map(function(N, ie) {
+        var rt = ve(N.startStr);
+        if (rt == null) return null;
+        var St = ve(N.endStr);
+        (St == null || St <= rt) && (St = rt + (N.duration || 60));
+        var jn = (rt - le) / 60 * ze,
+          Ln = Math.max(ze * .4, (St - rt) / 60 * ze - 2),
+          sn = orgColor(N.venue);
+        return React.createElement("div", {
+          key: ie,
+          onClick: function() {
+            de(N)
+          },
+          title: N.title,
+          style: {
+            position: "absolute",
+            top: jn,
+            left: 2,
+            right: 2,
+            height: Ln,
+            background: N.wish ? "transparent" : sn,
+            border: N.wish ? "2px dashed " + sn : "none",
+            borderRadius: 8,
+            padding: "4px 6px",
+            cursor: "pointer",
+            overflow: "hidden",
+            zIndex: 3,
+            color: N.wish ? C.txt : "#fff",
+            opacity: N.wish ? .9 : 1,
+            boxShadow: N.wish ? "none" : "0 2px 8px rgba(0,0,0,0.3)"
+          }
+        }, React.createElement("div", {
+          style: {
+            fontWeight: 700,
+            fontSize: 12,
+            lineHeight: 1.2,
+            textShadow: N.wish ? "none" : "0 1px 2px rgba(0,0,0,0.35)"
+          }
+        }, N.title), React.createElement("div", {
+          style: {
+            fontSize: 10,
+            opacity: .92,
+            marginTop: 1
+          }
+        }, N.startStr, priceLabel(N.priceFull) ? " \xB7 " + priceLabel(N.priceFull) : ""))
+      }), P.filter(function(N) {
+        return ve(N.startStr) == null
+      }).map(function(N, ie) {
+        var rt = orgColor(N.venue);
+        return React.createElement("div", {
+          key: "u" + ie,
+          onClick: function() {
+            de(N)
+          },
+          title: N.title + " (time TBC)",
+          style: {
+            position: "absolute",
+            top: 2 + ie * 19,
+            left: 2,
+            right: 2,
+            height: 17,
+            background: C.card,
+            borderLeft: "3px solid " + rt,
+            borderRadius: 4,
+            padding: "0 4px",
+            fontSize: 9,
+            fontWeight: 700,
+            color: C.txt2,
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+            zIndex: 4,
+            cursor: "pointer",
+            lineHeight: "17px"
+          }
+        }, N.title)
+      }))
+    })))), React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: C.txt3,
+        marginTop: 8,
+        textAlign: "center"
+      }
+    }, "Solid = booked \xB7 dashed = wishlist \xB7 scroll to see all times \xB7 tap a show for details"))
+  }(), Q === "proposals" && React.createElement(React.Fragment, null, React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 14,
+      flexWrap: "wrap"
+    }
+  }, React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      alignItems: "center",
+      flexWrap: "wrap"
+    }
+  }, React.createElement("p", {
+    style: {
+      fontSize: 13,
+      color: C.txt2,
+      margin: 0
+    }
+  }, "Group shows into options to suggest to friends."), X.length > 1 && React.createElement(LayoutToggle, {
+    layout: W,
+    set: en
+  })), React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      flexWrap: "wrap"
+    }
+  }, X.length > 0 && React.createElement("button", {
+    onClick: In,
+    style: {
+      padding: "9px 14px",
+      borderRadius: 12,
+      border: "1px solid " + C.border,
+      background: "rgba(96,165,250,0.2)",
+      color: "#93c5fd",
+      fontSize: 13,
+      fontWeight: 800,
+      cursor: "pointer",
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6
+    }
+  }, React.createElement(ShareLinkIcon, null), " Share plan"), React.createElement("button", {
+    onClick: zn,
+    style: {
+      padding: "9px 14px",
+      borderRadius: 12,
+      border: "none",
+      background: C.accent,
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: 800,
+      cursor: "pointer"
+    }
+  }, "+ New option"))), X.length > 1 && React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6,
+      flexWrap: "wrap",
+      marginBottom: 16
+    }
+  }, X.map(function(e) {
+    return React.createElement("button", {
+      key: e.id,
+      onClick: function() {
+        ae(function(l) {
+          var i = Object.assign({}, l);
+          return i[e.id] = !1, i
+        });
+        try {
+          var r = document.getElementById("prop-" + e.id);
+          r && r.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          })
+        } catch {}
+      },
+      title: "Jump to " + (e.title || "Untitled"),
+      style: {
+        padding: "6px 12px",
+        borderRadius: 20,
+        border: "1px solid " + C.border,
+        background: "rgba(168,85,247,0.1)",
+        color: "#c084fc",
+        fontSize: 12,
+        fontWeight: 800,
+        cursor: "pointer",
+        maxWidth: 220,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      }
+    }, e.title || "Untitled")
+  })), X.length === 0 ? React.createElement("div", {
+    style: {
+      textAlign: "center",
+      color: C.txt3,
+      fontSize: 15,
+      padding: "46px 12px"
+    }
+  }, "No options yet. Tap ", React.createElement("b", {
+    style: {
+      color: C.txt2
+    }
+  }, "+ New option"), ", then use ", React.createElement("b", {
+    style: {
+      color: C.txt2
+    }
+  }, "+ Add a show"), " to build a day out.") : React.createElement("div", {
+    style: W === "horizontal" ? {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))",
+      gap: 16,
+      alignItems: "start"
+    } : {}
+  }, X.map(e => {
+    const r = {};
+    (n || []).forEach(i => r[i.code] = i);
+    const l = e.codes.map(i => r[i]).filter(Boolean).sort(function(i, u) {
+      var c = timeToMin_(i.startStr),
+        T = timeToMin_(u.startStr);
+      return (c ?? 99999) - (T ?? 99999)
+    });
+    return React.createElement("div", {
+      key: e.id,
+      id: "prop-" + e.id,
+      style: {
+        background: C.card,
+        border: "1px solid " + C.border,
+        borderRadius: 16,
+        padding: 14,
+        marginBottom: W === "horizontal" ? 0 : 16,
+        scrollMarginTop: 70
+      }
+    }, React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 8,
+        alignItems: "center",
+        marginBottom: q[e.id] ? 0 : 12
+      }
+    }, React.createElement("button", {
+      onClick: () => Wn(e.id),
+      style: {
+        padding: "6px",
+        border: "none",
+        background: "transparent",
+        color: C.txt2,
+        cursor: "pointer",
+        display: "flex",
+        flexShrink: 0
+      }
+    }, React.createElement(ChevronIcon, {
+      open: !q[e.id]
+    })), React.createElement("input", {
+      value: e.title,
+      onChange: i => Wt(e.id, {
+        title: i.target.value
+      }),
+      "aria-label": "Option title",
+      placeholder: "Title",
+      style: {
+        flex: "1 1 100px",
+        minWidth: 0,
+        padding: "7px 10px",
+        borderRadius: 10,
+        border: "1px solid " + C.border,
+        background: "rgba(255,255,255,0.06)",
+        color: C.txt,
+        fontSize: 14,
+        fontWeight: 700,
+        outline: "none"
+      }
+    }), React.createElement("input", {
+      type: "date",
+      value: e.date || "",
+      title: "Day out",
+      "aria-label": "Day out",
+      onClick: i => {
+        try {
+          i.currentTarget.showPicker()
+        } catch {}
+      },
+      onChange: i => {
+        var u = i.target.value,
+          c = {
+            date: u
+          };
+        if (u && (!e.title || e.title === "New option")) {
+          var T = new Date(u + "T12:00:00");
+          isNaN(T.getTime()) || (c.title = "Proposed day " + String(T.getDate()).padStart(2, "0") + "/" + String(T.getMonth() + 1).padStart(2, "0") + "/" + T.getFullYear())
+        }
+        Wt(e.id, c)
+      },
+      style: {
+        flexShrink: 0,
+        padding: "6px 8px",
+        borderRadius: 10,
+        border: "1px solid " + C.border,
+        background: "rgba(255,255,255,0.06)",
+        color: C.txt,
+        fontSize: 12,
+        colorScheme: "dark",
+        cursor: "pointer"
+      }
+    }), React.createElement("button", {
+      onClick: () => Rn(e),
+      title: "Share just this option",
+      style: {
+        padding: "7px 10px",
+        borderRadius: 10,
+        border: "none",
+        background: "rgba(168,85,247,0.2)",
+        color: "#c084fc",
+        fontSize: 12,
+        fontWeight: 800,
+        cursor: "pointer",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 5,
+        flexShrink: 0
+      }
+    }, React.createElement(ShareThisIcon, null), " Share this"), React.createElement("button", {
+      onClick: () => Tn(e.id),
+      style: {
+        padding: "7px 9px",
+        borderRadius: 10,
+        border: "1px solid " + C.border,
+        background: "transparent",
+        color: C.txt3,
+        fontSize: 13,
+        fontWeight: 700,
+        cursor: "pointer",
+        flexShrink: 0
+      }
+    }, "\u2715")), !q[e.id] && React.createElement(React.Fragment, null, React.createElement("button", {
+      onClick: () => ut(Y.id === e.id ? {
+        id: null,
+        q: ""
+      } : {
+        id: e.id,
+        q: ""
+      }),
+      style: {
+        width: "100%",
+        padding: "10px",
+        borderRadius: 10,
+        border: "1px dashed " + C.border,
+        background: Y.id === e.id ? "rgba(168,85,247,0.12)" : "transparent",
+        color: Y.id === e.id ? "#c084fc" : C.txt2,
+        fontSize: 13,
+        fontWeight: 800,
+        cursor: "pointer",
+        marginBottom: 10
+      }
+    }, Y.id === e.id ? "Done adding" : "+ Add a show"), Y.id === e.id && React.createElement("div", {
+      style: {
+        marginTop: 8
+      }
+    }, React.createElement("input", {
+      autoFocus: !0,
+      value: Y.q,
+      onChange: i => ut({
+        id: e.id,
+        q: i.target.value
+      }),
+      "aria-label": "Search all shows by name",
+      placeholder: "Search all shows by name\u2026",
+      style: {
+        width: "100%",
+        boxSizing: "border-box",
+        padding: "9px 11px",
+        borderRadius: 10,
+        border: "1px solid " + C.border,
+        background: "rgba(255,255,255,0.06)",
+        color: C.txt,
+        fontSize: 13,
+        outline: "none"
+      }
+    }), React.createElement("div", {
+      style: {
+        marginTop: 6,
+        border: "1px solid " + C.border,
+        borderRadius: 10,
+        overflow: "hidden",
+        maxHeight: 300,
+        overflowY: "auto"
+      }
+    }, Y.q.trim().length < 2 ? React.createElement("div", {
+      style: {
+        padding: "14px",
+        fontSize: 12,
+        color: C.txt3,
+        textAlign: "center"
+      }
+    }, "Type at least 2 letters to search all ", (n || []).length.toLocaleString(), " shows. Tap a result to add or remove it.") : function() {
+      var i = (n || []).filter(function(u) {
+        return u.title.toLowerCase().includes(Y.q.trim().toLowerCase())
+      }).slice(0, 20);
+      return i.length ? i.map(function(u) {
+        var c = e.codes.includes(u.code);
+        return React.createElement("div", {
+          key: u.code,
+          onClick: function() {
+            c ? nn(e.id, u.code) : tn(e.id, u.code)
+          },
+          style: {
+            padding: "9px 11px",
+            cursor: "pointer",
+            fontSize: 13,
+            borderTop: "1px solid " + C.border,
+            display: "flex",
+            alignItems: "center",
+            gap: 9,
+            background: c ? "rgba(52,211,153,0.12)" : "transparent"
+          }
+        }, React.createElement("span", {
+          style: {
+            fontWeight: 800,
+            fontSize: 15,
+            color: c ? "#34d399" : C.accent,
+            flexShrink: 0,
+            width: 14,
+            textAlign: "center"
+          }
+        }, c ? "\u2713" : "+"), React.createElement("span", {
+          style: {
+            flex: 1,
+            minWidth: 0
+          }
+        }, React.createElement("div", {
+          style: {
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            fontWeight: 600
+          }
+        }, u.startStr ? u.startStr + " \xB7 " : "", u.title), React.createElement("div", {
+          style: {
+            fontSize: 11,
+            color: C.txt3,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap"
+          }
+        }, "\u{1F4CD} ", u.venueCode ? "#" + u.venueCode + " " : "", u.venue, u.duration ? " \xB7 " + u.duration + "m" : "")), priceLabel(u.priceFull) ? React.createElement("span", {
+          style: {
+            flexShrink: 0,
+            fontSize: 15,
+            fontWeight: 800,
+            color: C.txt
+          }
+        }, priceLabel(u.priceFull)) : null)
+      }) : React.createElement("div", {
+        style: {
+          padding: "14px",
+          fontSize: 12,
+          color: C.txt3,
+          textAlign: "center"
+        }
+      }, "No shows match that.")
+    }()), React.createElement("button", {
+      onClick: () => ut({
+        id: null,
+        q: ""
+      }),
+      style: {
+        width: "100%",
+        marginTop: 8,
+        padding: "9px",
+        borderRadius: 10,
+        border: "1px solid " + C.border,
+        background: "rgba(168,85,247,0.12)",
+        color: "#c084fc",
+        fontSize: 13,
+        fontWeight: 800,
+        cursor: "pointer"
+      }
+    }, "Done adding")), l.length > 0 && function() {
+      var i = l.map(function(T) {
+          var B = timeToMin_(T.startStr);
+          if (B == null) return null;
+          var j = timeToMin_(T.endStr);
+          return B < 360 && (B += 1440), j == null || j <= B ? j = B + (T.duration || 60) : j < 360 && (j += 1440), {
+            st: B,
+            en: j
+          }
+        }).filter(Boolean).sort(function(T, B) {
+          return T.st - B.st
+        }),
+        u = l.reduce(function(T, B) {
+          return T + (B.duration || 0)
+        }, 0),
+        c = l.reduce(function(T, B) {
+          return T + (typeof B.priceFull == "number" ? B.priceFull : 0)
+        }, 0);
+      return React.createElement("div", {
+        style: {
+          display: "flex",
+          gap: 8,
+          flexWrap: "wrap",
+          justifyContent: "center",
+          fontSize: 12,
+          fontWeight: 700,
+          color: C.txt2,
+          marginBottom: 10,
+          padding: "8px 11px",
+          background: "rgba(255,255,255,0.03)",
+          borderRadius: 10
+        }
+      }, i.length ? React.createElement("span", null, "\u23F1 ", fmtMin_(i[0].st), "\u2013", fmtMin_(i[i.length - 1].en)) : React.createElement("span", null, "No timed shows"), u ? React.createElement("span", null, "\xB7 ", Math.floor(u / 60), "h ", u % 60, "m of shows") : null, React.createElement("span", {
+        style: {
+          color: C.txt,
+          fontWeight: 800
+        }
+      }, "\xB7 \u{1F4B7} \xA3", (Math.round(c * 100) / 100).toString(), " total"))
+    }(), l.length > 0 && React.createElement("div", {
+      style: {
+        marginBottom: 12
+      }
+    }, React.createElement(TimedDay, {
+      items: l,
+      onOpen: de
+    })), React.createElement("textarea", {
+      value: e.comment || "",
+      onChange: i => Wt(e.id, {
+        comment: i.target.value
+      }),
+      "aria-label": "Note about this option (optional)",
+      placeholder: "Why they'll like it (optional)\u2026",
+      rows: 2,
+      style: {
+        width: "100%",
+        boxSizing: "border-box",
+        marginTop: 14,
+        marginBottom: 12,
+        padding: "9px 11px",
+        borderRadius: 10,
+        border: "1px solid " + C.border,
+        background: "rgba(255,255,255,0.06)",
+        color: C.txt,
+        fontSize: 13,
+        outline: "none",
+        resize: "vertical",
+        fontFamily: "inherit"
+      }
+    }), l.length > 0 && React.createElement("div", {
+      style: {
+        marginTop: 12
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: C.txt3,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: .5,
+        marginBottom: 6
+      }
+    }, "In this option (", l.length, ")"), React.createElement("div", {
+      style: {
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill,minmax(138px,1fr))",
+        gap: 6
+      }
+    }, l.map(function(i) {
+      var u = orgColor(i.venue);
+      return React.createElement("div", {
+        key: i.code,
+        style: {
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "6px 8px",
+          borderRadius: 8,
+          background: C.card,
+          border: "1px solid " + C.border,
+          borderLeft: "3px solid " + u
+        }
+      }, React.createElement("div", {
+        onClick: function() {
+          de(i)
+        },
+        style: {
+          flex: 1,
+          minWidth: 0,
+          cursor: "pointer"
+        }
+      }, React.createElement("div", {
+        style: {
+          fontSize: 12,
+          fontWeight: 700,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap"
+        }
+      }, i.startStr ? i.startStr + " \xB7 " : "", i.title)), React.createElement("button", {
+        onClick: function() {
+          nn(e.id, i.code)
+        },
+        title: "Remove",
+        style: {
+          background: "none",
+          border: "none",
+          color: C.txt3,
+          fontSize: 13,
+          cursor: "pointer",
+          flexShrink: 0,
+          lineHeight: 1
+        }
+      }, "\u2715"))
+    })))))
+  }))), un && React.createElement("div", {
+    onClick: () => Ie(!1),
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.5)",
+      zIndex: 80,
+      display: "flex",
+      alignItems: V ? "flex-end" : "flex-start",
+      justifyContent: "center"
+    }
+  }, React.createElement("div", {
+    "data-sheetscroll": !0,
+    onClick: e => e.stopPropagation(),
+    style: {
+      background: C.card,
+      border: "1px solid " + C.border,
+      borderRadius: V ? "18px 18px 0 0" : 16,
+      padding: "16px 16px 24px",
+      width: "100%",
+      maxWidth: V ? "100%" : 760,
+      margin: V ? 0 : "40px 12px",
+      maxHeight: V ? "75vh" : "85vh",
+      overflowY: "auto"
+    }
+  }, React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 15,
+      fontWeight: 800
+    }
+  }, Ze ? "Simple search" : "Filters"), React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6,
+      alignItems: "center"
+    }
+  }, React.createElement("button", {
+    onClick: () => {
+      dn(e => (e || Rt(), !e))
+    },
+    "aria-label": Ze ? "Show all filters" : "Simple search: use only the search box (clears the other filters)",
+    title: Ze ? "All filters" : "Simple search",
+    style: {
+      width: 34,
+      height: 34,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 9,
+      border: "1px solid " + (Ze ? C.accent : C.border),
+      background: Ze ? "rgba(168,85,247,0.18)" : "transparent",
+      color: Ze ? "#c084fc" : C.txt2,
+      fontSize: 16,
+      cursor: "pointer"
+    }
+  }, Ze ? "\u{1F39B}" : "\u{1F50D}"), React.createElement("button", {
+    onClick: Rt,
+    "aria-label": "Reset all filters",
+    title: "Reset all filters",
+    style: {
+      width: 34,
+      height: 34,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 9,
+      border: "1px solid " + C.border,
+      background: "transparent",
+      color: C.txt2,
+      fontSize: 17,
+      cursor: "pointer"
+    }
+  }, "\u21BA"), React.createElement("button", {
+    onClick: () => Ie(!1),
+    "aria-label": "Close filters",
+    title: "Close",
+    style: {
+      width: 34,
+      height: 34,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 9,
+      border: "1px solid " + C.border,
+      background: "transparent",
+      color: C.txt2,
+      fontSize: 18,
+      cursor: "pointer"
+    }
+  }, "\u2715"))), React.createElement(FilterControls, {
+    q: Pe,
+    setQ: At,
+    genre: _e,
+    setGenre: Nt,
+    age: Ve,
+    setAge: Et,
+    access: He,
+    setAccess: Dt,
+    accessOpts: Mn,
+    onDate: Ee,
+    setOnDate: Ft,
+    pickedDates: nt,
+    addPickedDate: mn,
+    removePickedDate: xn,
+    pmin: Ae,
+    setPmin: Bt,
+    pmax: Ne,
+    setPmax: Mt,
+    priceCeil: Fn,
+    genres: On,
+    ages: An,
+    venueSel: We,
+    toggleVenue: wn,
+    clearVenues: Kt,
+    venueNoSel: De,
+    toggleVenueNo: Sn,
+    clearVenueNos: Xt,
+    atype: Ue,
+    setAtype: _t,
+    country: Ge,
+    setCountry: Vt,
+    durMax: Je,
+    setDurMax: Ht,
+    startTod: we,
+    setStartTod: Ut,
+    dFrom: qe,
+    setDFrom: Gt,
+    dTo: Ye,
+    setDTo: Jt,
+    venues: rn.list,
+    venueFmt: En,
+    venueNos: Nn,
+    atypes: Dn,
+    countries: Bn,
+    smart: $,
+    setSmart: qt,
+    simple: Ze,
+    onClear: Rt,
+    active: me,
+    column: !0
+  }), React.createElement("button", {
+    onClick: () => Ie(!1),
+    style: {
+      marginTop: 14,
+      width: "100%",
+      padding: "11px",
+      borderRadius: 11,
+      border: "none",
+      background: C.accent,
+      color: "#fff",
+      fontWeight: 800,
+      fontSize: 14
+    }
+  }, "Show ", Xe.length.toLocaleString(), " shows"))), React.createElement("div", {
+    role: "contentinfo",
+    style: {
+      textAlign: "center",
+      fontSize: 13,
+      color: C.txt3,
+      padding: "26px 12px 6px",
+      marginTop: 24,
+      borderTop: "1px solid " + C.border,
+      lineHeight: 1.7
+    }
+  }, React.createElement("div", null, "Data accurate as at ", lt ? lt.toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }) : "loading\u2026", " (last Fringe API refresh)."), React.createElement("div", null, "Questions? ", ye ? React.createElement("a", {
+    href: "mailto:" + ye,
+    "aria-label": "Email the site admin at " + ye,
+    style: {
+      color: C.accent,
+      textDecoration: "underline",
+      fontWeight: 700
+    }
+  }, "Email the site admin") : React.createElement("span", {
+    style: {
+      color: C.txt3
+    }
+  }, "admin contact loading\u2026"))), V && Q === "browse" && null, V && React.createElement("div", {
+    role: "navigation",
+    "aria-label": "Sections",
+    style: {
+      position: "fixed",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 70,
+      background: C.card,
+      borderTop: "1px solid " + C.border,
+      display: "flex",
+      gap: 6,
+      padding: "9px 12px calc(9px + env(safe-area-inset-bottom))",
+      overflowX: "auto"
+    }
+  }, pe("browse", "Browse", "\u{1F3AD}"), pe("planner", "Planner", "\u2728"), pe("plan", "Wishlist", "\u{1F49C}"), pe("booked", "Booked", "\u{1F3AB}"), pe("calendar", "Cal", "\u{1F4C5}"), pe("proposals", "Pitch", "\u{1F4CB}"), pe("map", "Map", "\u{1F5FA}\uFE0F"), pe("stats", "Stats", "\u{1F4CA}"), Q === "browse" && null), ["browse", "plan", "booked", "map"].includes(Q) && React.createElement("button", {onClick: () => Ie(!0), "aria-label": "Filters", title: "Filters", style: {position: "fixed", right: 16, bottom: V ? 92 : 26, zIndex: 500, width: 52, height: 52, borderRadius: 26, border: "none", cursor: "pointer", background: "linear-gradient(135deg,var(--pink),var(--accent))", color: "#fff", boxShadow: "0 6px 20px rgba(168,85,247,0.5)", display: "flex", alignItems: "center", justifyContent: "center"}}, React.createElement("svg", {width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "#fff", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round"}, React.createElement("path", {d: "M3 4h18l-7 8v6l-4 2v-8z"})), me && React.createElement("span", {style: {position: "absolute", top: 9, right: 9, width: 9, height: 9, borderRadius: 5, background: "#fff", border: "1px solid var(--accent)"}})), React.createElement(Detail, {
+    s: oe,
+    inPlan: oe && d.has(oe.code),
+    isBk: oe && !!p[oe.code],
+    note: oe && se[oe.code],
+    onNote: Qt,
+    onToggle: () => oe && Se(oe.code),
+    onBook: e => Be(e),
+    wdate: oe && y[oe.code],
+    onWDate: Cn,
+    onClose: () => de(null),
+    proposals: X,
+    onAddToProp: wt
+  }), S && React.createElement(BookModal, {
+    s: S,
+    onConfirm: kn,
+    onClose: () => I(null)
+  }), k && React.createElement(HelpModal, {
+    rows: yt,
+    onClose: () => G(!1)
+  }), vn && React.createElement(SyncModal, {
+    onClose: () => Yt(!1)
+  }))
+}
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App, null));
