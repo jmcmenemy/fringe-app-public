@@ -4208,6 +4208,7 @@ function App() {
     [bkDateFilter, setBkDateFilter] = useState(""),
     [bkShowPast, setBkShowPast] = useState(false),
     [addShowOpen, setAddShowOpen] = useState(false),
+    [bkMenuOpen, setBkMenuOpen] = useState(null),
     [addShowQ, setAddShowQ] = useState(""),
     [compactCards, setCompactCards] = useState(function() { try { return localStorage.getItem("fringe-public-compact") === "1"; } catch { return false; } }),
     [X, xe] = useState(() => {
@@ -5445,7 +5446,7 @@ function App() {
       fontWeight: 700,
       cursor: "pointer"
     }
-  }, "Not now"))), React.createElement("div", {
+  }, "Not now"))), Q === "browse" && React.createElement("div", {
     style: {
       maxWidth: 520,
       margin: "0 auto",
@@ -6417,17 +6418,18 @@ function App() {
         alignItems: "center",
         flexWrap: "wrap"
       }
-    }, React.createElement("span", {
+    }, !V && React.createElement("span", {
       style: {
         fontSize: 13,
         color: C.txt3
       }
-    }, Xe.length.toLocaleString(), " shows", Xe.length > st ? " \xB7 showing " + Math.min(st, Xe.length) : "")), React.createElement("div", {
+    }, Xe.length.toLocaleString() + " shows", Xe.length > st ? " \xB7 showing " + Math.min(st, Xe.length) : "")), React.createElement("div", {
       style: {
         display: "flex",
         gap: 8,
         alignItems: "center",
-        flexWrap: "wrap"
+        flexWrap: "wrap",
+        justifyContent: V ? "center" : "flex-start"
       }
     }, null, React.createElement("div", {
       style: {
@@ -6464,7 +6466,7 @@ function App() {
         fontWeight: 800,
         cursor: "pointer"
       }
-    }, compactCards ? "\u25A3 Compact" : "\u25A3 Compact"), React.createElement("div", {
+    }, V ? "\u25A3" : "\u25A3 Compact"), React.createElement("div", {
       style: {
         position: "relative"
       }
@@ -6484,7 +6486,7 @@ function App() {
         fontWeight: 800,
         cursor: "pointer"
       }
-    }, "\u2699 Info"), ee && React.createElement("div", {
+    }, V ? "\u2699" : "\u2699 Info"), ee && React.createElement("div", {
       style: {
         position: "absolute",
         right: 0,
@@ -6552,7 +6554,7 @@ function App() {
       return React.createElement("option", {
         key: i,
         value: i
-      }, i, " shows")
+      }, V ? "\u{1F3AD} " + i : i + " shows")
     }))))
   }(), D === "tiles" ? React.createElement(Tiles, {
     isMobile: V,
@@ -6980,8 +6982,11 @@ function App() {
       style: {
         display: "flex",
         gap: 8,
-        flexWrap: "wrap"
+        flexWrap: "wrap",
+        flexDirection: V ? "column" : "row"
       }
+    }, React.createElement("div", {
+      style: { display: "flex", gap: 8, flexWrap: "wrap", justifyContent: V ? "center" : "flex-start" }
     }, React.createElement("button", {
       onClick: function() {
         downloadAllICS_(e, p, y)
@@ -6998,7 +7003,7 @@ function App() {
         cursor: "pointer",
         lineHeight: 1.3
       }
-    }, "\u{1F4C5} Download"), React.createElement("button", {
+    }, V ? "\u{1F4C5}" : "\u{1F4C5} Download"), React.createElement("button", {
       onClick: function() {
         var showMap = {};
         (n || []).forEach(function(s) { showMap[s.code] = s; });
@@ -7050,7 +7055,7 @@ function App() {
         cursor: "pointer",
         lineHeight: 1.3
       }
-    }, "\u{1F4CA} Export"), React.createElement("button", {
+    }, V ? "\u{1F4CA}" : "\u{1F4CA} Export"), React.createElement("button", {
       onClick: function() { setShareMode(!shareMode); setShareSel(new Set()); setShareCopied(false); },
       style: {
         padding: "7px 14px",
@@ -7062,8 +7067,8 @@ function App() {
         fontWeight: 800,
         cursor: "pointer"
       }
-    }, shareMode ? "Cancel sharing" : "\u{1F517} Share with friend"),
-    React.createElement("input", {
+    }, shareMode ? (V ? "✕" : "Cancel sharing") : (V ? "\u{1F517}" : "\u{1F517} Share with friend")),
+    !V && React.createElement("input", {
       type: "date",
       value: bkDateFilter,
       onChange: function(ev) { setBkDateFilter(ev.target.value); },
@@ -7071,7 +7076,7 @@ function App() {
       "aria-label": "Filter bookings by date",
       style: {padding: "7px 10px", borderRadius: 8, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 13, colorScheme: THEME === "light" ? "light" : "dark", cursor: "pointer"}
     }),
-    bkDateFilter && React.createElement("button", {
+    !V && bkDateFilter && React.createElement("button", {
       onClick: function() { setBkDateFilter(""); },
       title: "Clear date filter",
       style: {padding: "7px 10px", borderRadius: 8, border: "1px solid " + C.border, background: "rgba(239,68,68,0.12)", color: "#f87171", fontSize: 12, fontWeight: 800, cursor: "pointer"}
@@ -7096,7 +7101,22 @@ function App() {
         cursor: "pointer",
         lineHeight: 1.3
       }
-    }, "\u2795 Add show"))),
+    }, V ? "\u2795" : "\u2795 Add show")),
+    V && React.createElement("div", {
+      style: { display: "flex", gap: 8, alignItems: "center" }
+    }, React.createElement("input", {
+      type: "date",
+      value: bkDateFilter,
+      onChange: function(ev) { setBkDateFilter(ev.target.value); },
+      title: "Filter to a specific date",
+      "aria-label": "Filter bookings by date",
+      style: {padding: "7px 10px", borderRadius: 8, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 13, colorScheme: THEME === "light" ? "light" : "dark", cursor: "pointer", flex: 1}
+    }),
+    bkDateFilter && React.createElement("button", {
+      onClick: function() { setBkDateFilter(""); },
+      title: "Clear date filter",
+      style: {padding: "7px 10px", borderRadius: 8, border: "1px solid " + C.border, background: "rgba(239,68,68,0.12)", color: "#f87171", fontSize: 12, fontWeight: 800, cursor: "pointer"}
+    }, "\u2715")))),
     sharedBookings && sharedBookings.length > 0 && React.createElement("div", {
       style: {
         background: "rgba(52,211,153,0.12)",
@@ -7289,19 +7309,21 @@ function App() {
           }))));
           var he = [m.s.venueAddr, m.s.venuePostcode].filter(Boolean).join(", ");
           var shareKey = m.code + "|" + m.rec.date + "|" + m.bIdx;
+          var _menuKey = m.code + "|" + m.bIdx;
+          var _menuOpen = bkMenuOpen === _menuKey;
           if (j.push(React.createElement("div", {
               key: m.code + "|" + m.bIdx,
               style: {
                 display: "flex",
-                alignItems: "center",
-                gap: 10,
+                flexDirection: _menuOpen ? "column" : "row",
+                gap: _menuOpen ? 0 : 10,
                 padding: "11px 13px",
                 borderRadius: 10,
                 background: shareMode && shareSel.has(shareKey) ? "rgba(168,85,247,0.12)" : C.card,
                 border: "1px solid " + (shareMode && shareSel.has(shareKey) ? "rgba(168,85,247,0.4)" : C.border),
                 borderLeft: "4px solid " + orgColor(m.s.venue)
               }
-            }, shareMode && React.createElement("input", {
+            }, React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, minWidth: 0, overflow: "hidden" } }, shareMode && React.createElement("input", {
               type: "checkbox",
               checked: shareSel.has(shareKey),
               onChange: function() {
@@ -7354,156 +7376,71 @@ function App() {
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap"
               }
-            }, "\u{1F4CD} ", he, " \u2197")), React.createElement("div", {
-              style: {
-                display: "flex",
-                gap: 6,
-                flexWrap: "wrap",
-                justifyContent: "flex-end",
-                alignItems: "center",
-                flexShrink: 0
-              }
-            }, React.createElement("button", {
-              onClick: function() {
-                Se(m.code)
+            }, "\u{1F4CD} ", he, " \u2197")), function() {
+              var btnS = {width: 32, height: 32, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 13, cursor: "pointer", padding: 0};
+              return React.createElement("div", {
+                style: { display: "flex", gap: 4, alignItems: "center", flexShrink: 0 }
               },
-              "aria-label": d.has(m.code) ? "Remove " + (m.s.title || "this show") + " from your wishlist" : "Add " + (m.s.title || "this show") + " to your wishlist",
-              title: d.has(m.code) ? "On your wishlist" : "Add to wishlist",
-              style: {
-                width: 40,
-                height: 40,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 8,
-                border: "1px solid " + (d.has(m.code) ? "#34d399" : C.border),
-                background: d.has(m.code) ? "rgba(52,211,153,0.16)" : "transparent",
-                color: d.has(m.code) ? "#34d399" : C.txt2,
-                fontSize: 14,
-                cursor: "pointer"
-              }
-            }, d.has(m.code) ? "\u2665" : "\u2661"), React.createElement("button", {
-              onClick: function() {
-                Be(m.s)
-              },
-              "aria-label": "Edit booking date and time for " + (m.s.title || "this show"),
-              title: "Edit booking date/time",
-              style: {
-                width: 40,
-                height: 40,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 8,
-                border: "1px solid #93c5fd",
-                background: "rgba(96,165,250,0.18)",
-                color: "#93c5fd",
-                fontSize: 13,
-                cursor: "pointer"
-              }
-            }, "\u{1F39F}"), React.createElement("select", {
-              value: "",
-              onChange: function(z) {
-                z.target.value && wt(z.target.value, m.code)
-              },
-              "aria-label": "Add to a proposal",
-              title: "Add to a proposal",
-              style: {
-                width: 40,
-                height: 40,
-                padding: 0,
-                textAlign: "center",
-                textAlignLast: "center",
-                borderRadius: 8,
-                border: "1px solid " + C.border,
-                background: "transparent",
-                color: C.txt2,
-                fontSize: 15,
-                colorScheme: THEME === "light" ? "light" : "dark",
-                cursor: "pointer",
-                appearance: "none",
-                WebkitAppearance: "none",
-                MozAppearance: "none"
-              }
-            }, React.createElement("option", {
-              value: ""
-            }, "\u{1F4CB}"), X.map(function(z) {
-              return React.createElement("option", {
-                key: z.id,
-                value: z.id
-              }, z.title || "Untitled")
-            }), React.createElement("option", {
-              value: "__new"
-            }, "\uFF0B New")), m.s.website && React.createElement("a", {
-              href: m.s.website,
-              target: "_blank",
-              rel: "noopener noreferrer",
-              title: "View listing (opens in a new tab)",
-              "aria-label": "View " + (m.s.title || "this show") + " listing (opens in a new tab)",
-              style: {
-                width: 40,
-                height: 40,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 8,
-                border: "1px solid " + C.border,
-                color: C.txt2,
-                textDecoration: "none"
-              }
-            }, React.createElement(LinkIcon, null)), m.rec.date && React.createElement("button", {
-              onClick: function() {
-                downloadICS_(m.s, m.rec)
-              },
-              title: "Download calendar file (Apple / iCal .ics)",
-              "aria-label": "Download calendar file for " + (m.s.title || "this show"),
-              style: {
-                width: 40,
-                height: 40,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 8,
-                border: "1px solid " + C.border,
-                background: "transparent",
-                color: C.txt2,
-                fontSize: 15,
-                cursor: "pointer"
-              }
-            }, "\u{1F4C5}"), m.rec.date && React.createElement("a", {
-              href: gcalUrl_(m.s, m.rec),
-              target: "_blank",
-              rel: "noopener noreferrer",
-              title: "Add to Google Calendar (opens in a new tab)",
-              "aria-label": "Add " + (m.s.title || "this show") + " to Google Calendar (opens in a new tab)",
-              style: {
-                width: 40,
-                height: 40,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 8,
-                border: "1px solid " + C.border,
-                background: "transparent",
-                color: C.txt2,
-                fontSize: 15,
-                textDecoration: "none"
-              }
-            }, "\u{1F5D3}\uFE0F"), React.createElement("button", {
-              onClick: function() {
-                $t(m.code, m.bIdx)
-              },
-              "aria-label": "Remove " + (m.s.title || "this show") + " from your bookings",
-              title: "Remove booking",
-              style: {
-                background: "none",
-                border: "none",
-                color: C.txt3,
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: "pointer"
-              }
-            }, "\u2715")))), re < c.length - 1) {
+              React.createElement("button", {
+                onClick: function() { Be(m.s); },
+                "aria-label": "Edit booking",
+                title: "Edit booking date/time",
+                style: Object.assign({}, btnS, {border: "1px solid #93c5fd", background: "rgba(96,165,250,0.18)", color: "#93c5fd"})
+              }, "\u{1F39F}"),
+              React.createElement("button", {
+                onClick: function() { setBkMenuOpen(_menuOpen ? null : _menuKey); },
+                "aria-label": _menuOpen ? "Close actions" : "More actions",
+                title: _menuOpen ? "Close actions" : "More actions",
+                style: Object.assign({}, btnS, {fontSize: 16, fontWeight: 900, letterSpacing: 1})
+              }, _menuOpen ? "\u2715" : "\u22EF"));
+            }()),
+            _menuOpen && React.createElement("div", {
+              style: { display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap", paddingTop: 8, marginTop: 8, borderTop: "1px solid " + C.border }
+            }, function() {
+              var btnS = {width: 32, height: 32, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 13, cursor: "pointer", padding: 0};
+              return [
+                React.createElement("button", {
+                  key: "wish",
+                  onClick: function() { Se(m.code); },
+                  "aria-label": d.has(m.code) ? "Remove from wishlist" : "Add to wishlist",
+                  title: d.has(m.code) ? "On your wishlist" : "Add to wishlist",
+                  style: Object.assign({}, btnS, {border: "1px solid " + (d.has(m.code) ? "#34d399" : C.border), background: d.has(m.code) ? "rgba(52,211,153,0.16)" : "transparent", color: d.has(m.code) ? "#34d399" : C.txt2})
+                }, d.has(m.code) ? "\u2665" : "\u2661"),
+                React.createElement("select", {
+                  key: "prop",
+                  value: "",
+                  onChange: function(z) { z.target.value && wt(z.target.value, m.code); },
+                  "aria-label": "Add to a proposal",
+                  title: "Add to a proposal",
+                  style: Object.assign({}, btnS, {textAlign: "center", textAlignLast: "center", fontSize: 14, colorScheme: THEME === "light" ? "light" : "dark", appearance: "none", WebkitAppearance: "none", MozAppearance: "none"})
+                }, React.createElement("option", {value: ""}, "\u{1F4CB}"), X.map(function(z) { return React.createElement("option", {key: z.id, value: z.id}, z.title || "Untitled"); }), React.createElement("option", {value: "__new"}, "\uFF0B New")),
+                m.s.website ? React.createElement("a", {
+                  key: "web",
+                  href: m.s.website, target: "_blank", rel: "noopener noreferrer",
+                  title: "View listing",
+                  style: Object.assign({}, btnS, {textDecoration: "none"})
+                }, React.createElement(LinkIcon, null)) : null,
+                m.rec.date ? React.createElement("button", {
+                  key: "ics",
+                  onClick: function() { downloadICS_(m.s, m.rec); },
+                  title: "Download .ics",
+                  style: btnS
+                }, "\u{1F4C5}") : null,
+                m.rec.date ? React.createElement("a", {
+                  key: "gcal",
+                  href: gcalUrl_(m.s, m.rec), target: "_blank", rel: "noopener noreferrer",
+                  title: "Google Calendar",
+                  style: Object.assign({}, btnS, {textDecoration: "none"})
+                }, "\u{1F5D3}\uFE0F") : null,
+                React.createElement("button", {
+                  key: "del",
+                  onClick: function() { $t(m.code, m.bIdx); setBkMenuOpen(null); },
+                  "aria-label": "Remove booking",
+                  title: "Remove booking",
+                  style: Object.assign({}, btnS, {border: "1px solid rgba(239,68,68,0.4)", background: "rgba(239,68,68,0.1)", color: "#f87171"})
+                }, "\u2715")
+              ].filter(Boolean);
+            }()))), re < c.length - 1) {
             var ve = B(m),
               Ce = T(c[re + 1]),
               Fe = walkMin_(m.s, c[re + 1].s),
@@ -7723,8 +7660,9 @@ function App() {
     }, "Today")), React.createElement("div", {
       style: {
         display: "flex",
-        gap: 8,
-        flexWrap: "wrap"
+        gap: V ? 4 : 8,
+        flexWrap: "nowrap",
+        alignItems: "center"
       }
     }, React.createElement("div", {
       style: {
