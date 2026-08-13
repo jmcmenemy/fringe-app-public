@@ -980,13 +980,22 @@ function TimedDay({
         paddingRight: v.website ? 15 : 0,
         textShadow: v.wish ? "none" : "0 1px 2px rgba(0,0,0,0.35)"
       }
-    }, v.title), React.createElement("div", {
+    }, v.title), v.artist && React.createElement("div", {
+      style: {
+        fontSize: 10,
+        opacity: .85,
+        lineHeight: 1.2,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
+      }
+    }, v.artist), React.createElement("div", {
       style: {
         fontSize: 11,
         opacity: .92,
         marginTop: 1
       }
-    }, fmtMin_(v._s), "\u2013", fmtMin_(v._e), priceLabel(v.priceFull) ? "  \xB7  " + priceLabel(v.priceFull) : ""), fe > 48 && React.createElement("div", {
+    }, fmtMin_(v._s), "\u2013", fmtMin_(v._e)), fe > 48 && React.createElement("div", {
       style: {
         fontSize: 10,
         opacity: .85,
@@ -995,7 +1004,7 @@ function TimedDay({
         textOverflow: "ellipsis",
         whiteSpace: "nowrap"
       }
-    }, v.venueCode ? "#" + v.venueCode + " " : "", v.venue))
+    }, "\u{1F4CD} ", v.venue, v.venueAddr ? ", " + v.venueAddr.split(",")[0].trim() : "", v.venuePostcode ? ", " + v.venuePostcode : ""))
   })))
 }
 
@@ -5440,7 +5449,7 @@ function App() {
     style: {
       maxWidth: 520,
       margin: "0 auto",
-      padding: "0 12px"
+      padding: "10px 12px 0"
     }
   }, React.createElement("div", {
     style: {
@@ -7863,9 +7872,11 @@ function App() {
           }
         }, React.createElement("div", {
           style: { fontWeight: 700, fontSize: 11, lineHeight: 1.2, textShadow: N.wish ? "none" : "0 1px 2px rgba(0,0,0,0.35)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
-        }, N.title), React.createElement("div", {
+        }, N.title), N.artist && React.createElement("div", {
+          style: { fontSize: 9, opacity: .8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
+        }, N.artist), React.createElement("div", {
           style: { fontSize: 9, opacity: .92, marginTop: 1, whiteSpace: "nowrap" }
-        }, N.startStr, priceLabel(N.priceFull) ? " \xB7 " + priceLabel(N.priceFull) : ""))
+        }, N.startStr, N.venue ? " \xB7 " + N.venue : ""))
       })))
     }))), React.createElement("div", {
       style: {
@@ -8032,13 +8043,24 @@ function App() {
             lineHeight: 1.2,
             textShadow: N.wish ? "none" : "0 1px 2px rgba(0,0,0,0.35)"
           }
-        }, N.title), React.createElement("div", {
+        }, N.title), N.artist && React.createElement("div", {
+          style: {
+            fontSize: 10,
+            opacity: .8,
+            lineHeight: 1.2,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap"
+          }
+        }, N.artist), React.createElement("div", {
           style: {
             fontSize: 10,
             opacity: .92,
             marginTop: 1
           }
-        }, N.startStr, priceLabel(N.priceFull) ? " \xB7 " + priceLabel(N.priceFull) : ""))
+        }, N.startStr, N.venue ? " \xB7 " + N.venue : ""), N.venueAddr || N.venuePostcode ? React.createElement("div", {
+          style: { fontSize: 9, opacity: .8, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
+        }, "\u{1F4CD} ", N.venueAddr ? N.venueAddr.split(",")[0].trim() : "", N.venuePostcode ? (N.venueAddr ? ", " : "") + N.venuePostcode : "") : null)
       }), P.filter(function(N) {
         return ve(N.startStr) == null
       }).map(function(N, ie) {
@@ -8900,7 +8922,9 @@ function App() {
         style: { fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }
       }, s.title), React.createElement("div", {
         style: { fontSize: 12, color: C.txt2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }
-      }, s.artist, s.artist && s.venue ? " \u00B7 " : "", s.venue, priceLabel(s.priceFull) ? " \u00B7 " + priceLabel(s.priceFull) : "")), isBooked && React.createElement("span", {
+      }, s.artist, s.artist && s.venue ? " \u00B7 " : "", s.venue, priceLabel(s.priceFull) ? " \u00B7 " + priceLabel(s.priceFull) : ""), React.createElement("div", {
+        style: { fontSize: 11, color: C.txt3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 1 }
+      }, s.first && s.last ? "\u{1F5D3} " + s.first.slice(5) + " \u2013 " + s.last.slice(5) : "", s.first && s.startStr ? " \u00B7 " : "", s.startStr ? "\u{1F552} " + s.startStr : "", s.duration ? " (" + s.duration + " min)" : "")), isBooked && React.createElement("span", {
         style: { fontSize: 11, color: "#34d399", fontWeight: 700, flexShrink: 0 }
       }, "\u2713 Booked"), React.createElement("span", {
         style: { fontSize: 18, flexShrink: 0 }
