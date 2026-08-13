@@ -4169,6 +4169,8 @@ function App() {
     [compFilter, setCompFilter] = useState(""),
     [bkDateFilter, setBkDateFilter] = useState(""),
     [bkShowPast, setBkShowPast] = useState(false),
+    [addShowOpen, setAddShowOpen] = useState(false),
+    [addShowQ, setAddShowQ] = useState(""),
     [compactCards, setCompactCards] = useState(function() { try { return localStorage.getItem("fringe-public-compact") === "1"; } catch { return false; } }),
     [X, xe] = useState(() => {
       try {
@@ -5406,6 +5408,48 @@ function App() {
       cursor: "pointer"
     }
   }, "Not now"))), React.createElement("div", {
+    style: {
+      maxWidth: 520,
+      margin: "0 auto",
+      padding: "0 12px"
+    }
+  }, React.createElement("div", {
+    style: {
+      position: "relative"
+    }
+  }, React.createElement("input", {
+    value: Pe,
+    onChange: function(ev) { At(ev.target.value); if (Q !== "browse") mt("browse"); },
+    "aria-label": "Search shows, artists and venues",
+    placeholder: "\u{1F50D} Search shows, artists, venues\u2026",
+    style: {
+      width: "100%",
+      padding: "11px 40px 11px 16px",
+      borderRadius: 12,
+      border: "1px solid " + C.border,
+      background: C.card,
+      color: C.txt,
+      fontSize: 15,
+      outline: "none",
+      boxSizing: "border-box"
+    }
+  }), Pe && React.createElement("button", {
+    onClick: function() { At(""); },
+    "aria-label": "Clear search",
+    style: {
+      position: "absolute",
+      right: 10,
+      top: "50%",
+      transform: "translateY(-50%)",
+      border: "none",
+      background: "transparent",
+      color: C.txt3,
+      fontSize: 18,
+      cursor: "pointer",
+      padding: "2px 6px",
+      lineHeight: 1
+    }
+  }, "\u2715"))), React.createElement("div", {
     id: "main",
     tabIndex: -1,
     style: {
@@ -5758,7 +5802,309 @@ function App() {
         fontSize: 12,
         color: C.txt2
       }
-    }, "grand total")))), Object.keys(ve).length > 0 && je(Fe(ve, 6), "By genre", l), Object.keys(Ce).length > 0 && je(Fe(Ce, 6), "Top venues", l)), function() {
+    }, "grand total")))), Object.keys(ve).length > 0 && je(Fe(ve, 6), "By genre", l), Object.keys(Ce).length > 0 && je(Fe(Ce, 6), "Top venues", l),
+
+    // --- Personal insights ---
+    l > 0 && React.createElement("div", {
+      style: { marginTop: 24, borderTop: "1px solid " + C.border, paddingTop: 18 }
+    },
+      React.createElement("div", {style: {fontSize: 16, fontWeight: 900, marginBottom: 12}}, "\u{1F4A1} Personal insights"),
+
+      // Average rating
+      function() {
+        var ratedCodes = Object.keys(ratings).filter(function(k) { return ratings[k] > 0 && p[k]; });
+        if (!ratedCodes.length) return null;
+        var avgRat = Math.round(ratedCodes.reduce(function(a, k) { return a + ratings[k]; }, 0) / ratedCodes.length * 10) / 10;
+        var stars = "";
+        for (var si = 0; si < 5; si++) stars += si < Math.round(avgRat) ? "\u2605" : "\u2606";
+        return React.createElement("div", {
+          style: { display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }
+        },
+          le(stars, "Avg rating (" + avgRat.toFixed(1) + "/5)", "#FBBF24"),
+          le(ratedCodes.length + "/" + l, "Shows rated", "#60A5FA"),
+          function() {
+            var best = ratedCodes.filter(function(k) { return ratings[k] === 5; });
+            return best.length ? le(best.length, "5-star shows", "#34D399") : null;
+          }()
+        );
+      }(),
+
+      // Companions breakdown
+      function() {
+        var compCodes = Object.keys(companions).filter(function(k) { return companions[k] && p[k]; });
+        if (!compCodes.length) return null;
+        var compCounts = {};
+        compCodes.forEach(function(k) { var c = companions[k]; compCounts[c] = (compCounts[c] || 0) + 1; });
+        var sorted = Object.keys(compCounts).sort(function(a, b) { return compCounts[b] - compCounts[a]; });
+        var topComp = sorted[0];
+        return React.createElement("div", {style: {marginBottom: 14}},
+          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}}, "\u{1F465} Companions"),
+          React.createElement("div", {style: {display: "flex", gap: 8, flexWrap: "wrap"}},
+            sorted.slice(0, 6).map(function(name) {
+              return React.createElement("div", {
+                key: name,
+                style: {
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  background: name === topComp ? "rgba(168,85,247,0.15)" : C.card,
+                  border: "1px solid " + (name === topComp ? "rgba(168,85,247,0.4)" : C.border),
+                  fontSize: 13, fontWeight: 700
+                }
+              }, name, React.createElement("span", {style: {marginLeft: 6, fontSize: 11, color: C.txt2}}, compCounts[name] + " show" + (compCounts[name] === 1 ? "" : "s")));
+            })
+          )
+        );
+      }(),
+
+      // Day of week breakdown for bookings
+      function() {
+        var days = {"Mon": 0, "Tue": 0, "Wed": 0, "Thu": 0, "Fri": 0, "Sat": 0, "Sun": 0};
+        var dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        var orderedDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        r.forEach(function(z) {
+          if (z.rec.date) {
+            var d = new Date(z.rec.date + "T12:00:00");
+            var dn = dayNames[d.getDay()];
+            days[dn] = (days[dn] || 0) + 1;
+          }
+        });
+        var maxDay = Math.max.apply(null, orderedDays.map(function(d) { return days[d]; }));
+        if (maxDay === 0) return null;
+        var favDay = orderedDays.reduce(function(a, b) { return days[a] >= days[b] ? a : b; });
+        var dayColors = {"Mon": "#60A5FA", "Tue": "#34D399", "Wed": "#FBBF24", "Thu": "#F472B6", "Fri": "#A78BFA", "Sat": "#FB923C", "Sun": "#F87171"};
+        return React.createElement("div", {style: {marginBottom: 14}},
+          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}},
+            "\u{1F4C5} Shows by day of week \u2014 you love " + favDay + "s!"),
+          React.createElement("div", {style: {display: "flex", gap: 4, alignItems: "flex-end", height: 80}},
+            orderedDays.map(function(d) {
+              var pct = maxDay > 0 ? Math.max(days[d] / maxDay * 100, days[d] > 0 ? 8 : 2) : 2;
+              return React.createElement("div", {
+                key: d,
+                style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }
+              },
+                days[d] > 0 && React.createElement("span", {style: {fontSize: 11, fontWeight: 800, color: C.txt2}}, days[d]),
+                React.createElement("div", {
+                  style: {
+                    width: "100%",
+                    height: pct + "%",
+                    minHeight: 3,
+                    borderRadius: "4px 4px 0 0",
+                    background: d === favDay ? "linear-gradient(180deg," + dayColors[d] + ",rgba(168,85,247,0.6))" : dayColors[d],
+                    opacity: days[d] > 0 ? 1 : 0.15
+                  }
+                }),
+                React.createElement("span", {style: {fontSize: 10, color: C.txt3, fontWeight: 600}}, d)
+              );
+            })
+          )
+        );
+      }(),
+
+      // Time of day preference
+      function() {
+        var slots = {"\u{1F305} Morning": 0, "\u2600\uFE0F Afternoon": 0, "\u{1F306} Evening": 0, "\u{1F319} Late night": 0};
+        var slotKeys = Object.keys(slots);
+        r.forEach(function(z) {
+          var t = timeToMin_(z.rec.start || z.s.startStr);
+          if (t == null) return;
+          if (t < 720) slots["\u{1F305} Morning"]++;
+          else if (t < 1020) slots["\u2600\uFE0F Afternoon"]++;
+          else if (t < 1320) slots["\u{1F306} Evening"]++;
+          else slots["\u{1F319} Late night"]++;
+        });
+        var total = slotKeys.reduce(function(a, k) { return a + slots[k]; }, 0);
+        if (total === 0) return null;
+        var slotColors = ["#FBBF24", "#FB923C", "#A78BFA", "#818CF8"];
+        return React.createElement("div", {style: {marginBottom: 14}},
+          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}}, "\u23F0 When you go"),
+          React.createElement("div", {style: {display: "flex", borderRadius: 10, overflow: "hidden", height: 28}},
+            slotKeys.map(function(k, idx) {
+              var pct = total > 0 ? slots[k] / total * 100 : 0;
+              if (pct === 0) return null;
+              return React.createElement("div", {
+                key: k,
+                title: k + ": " + slots[k] + " shows (" + Math.round(pct) + "%)",
+                style: {
+                  width: pct + "%",
+                  background: slotColors[idx],
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: "#000",
+                  minWidth: pct > 12 ? 0 : 0,
+                  overflow: "hidden",
+                  whiteSpace: "nowrap"
+                }
+              }, pct > 15 ? Math.round(pct) + "%" : "");
+            })
+          ),
+          React.createElement("div", {style: {display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6}},
+            slotKeys.map(function(k, idx) {
+              if (slots[k] === 0) return null;
+              return React.createElement("span", {
+                key: k,
+                style: { fontSize: 11, color: C.txt2 }
+              }, React.createElement("span", {style: {display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: slotColors[idx], marginRight: 4}}), k + " " + slots[k]);
+            })
+          )
+        );
+      }(),
+
+      // Streak & fun facts
+      function() {
+        var dates = r.map(function(z) { return z.rec.date; }).filter(Boolean).sort();
+        if (dates.length < 2) return null;
+        var uniqueDates = [];
+        dates.forEach(function(d) { if (uniqueDates[uniqueDates.length - 1] !== d) uniqueDates.push(d); });
+        // Calculate longest streak
+        var streak = 1, maxStreak = 1;
+        for (var si = 1; si < uniqueDates.length; si++) {
+          var prev = new Date(uniqueDates[si-1] + "T12:00:00");
+          var curr = new Date(uniqueDates[si] + "T12:00:00");
+          if ((curr - prev) === 86400000) { streak++; if (streak > maxStreak) maxStreak = streak; }
+          else streak = 1;
+        }
+        // Average shows per day
+        var avgPerDay = Math.round(r.length / uniqueDates.length * 10) / 10;
+        // Earliest and latest show
+        var earliest = null, latest = null;
+        r.forEach(function(z) {
+          var t = timeToMin_(z.rec.start || z.s.startStr);
+          if (t == null) return;
+          if (earliest == null || t < earliest.t) earliest = {t: t, s: z.s};
+          if (latest == null || t > latest.t) latest = {t: t, s: z.s};
+        });
+        var fmtT = function(m) { return Math.floor(m / 60) + ":" + ("0" + (m % 60)).slice(-2); };
+        return React.createElement("div", {
+          style: { display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }
+        },
+          maxStreak > 1 && le(maxStreak + " days", "\u{1F525} Longest streak", "#FB923C"),
+          le(avgPerDay, "Shows per day (avg)", "#60A5FA"),
+          earliest && le(fmtT(earliest.t), "Earliest show", "#FBBF24"),
+          latest && le(fmtT(latest.t), "Latest show", "#818CF8")
+        );
+      }(),
+
+      // Genre diversity
+      function() {
+        var myGenres = {};
+        r.forEach(function(z) { if (z.s.genre) myGenres[z.s.genre] = (myGenres[z.s.genre] || 0) + 1; });
+        var genreKeys = Object.keys(myGenres);
+        if (genreKeys.length < 2) return null;
+        var allGenreCount = 0;
+        (n || []).forEach(function(s) { if (s.genre) { var seen = {}; if (!seen[s.genre]) { seen[s.genre] = 1; allGenreCount++; } } });
+        var allG = {}; (n || []).forEach(function(s) { if (s.genre) allG[s.genre] = 1; });
+        allGenreCount = Object.keys(allG).length;
+        var diversityPct = allGenreCount > 0 ? Math.round(genreKeys.length / allGenreCount * 100) : 0;
+        var genreColors = ["#F472B6", "#34D399", "#60A5FA", "#FBBF24", "#A78BFA", "#FB923C", "#2DD4BF", "#F87171", "#818CF8", "#4ADE80"];
+        var total = r.length;
+        return React.createElement("div", {style: {marginBottom: 14}},
+          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}},
+            "\u{1F3AD} Genre diversity \u2014 " + genreKeys.length + " of " + allGenreCount + " genres (" + diversityPct + "%)"),
+          React.createElement("div", {style: {display: "flex", borderRadius: 10, overflow: "hidden", height: 24}},
+            genreKeys.sort(function(a, b) { return myGenres[b] - myGenres[a]; }).map(function(g, idx) {
+              var pct = total > 0 ? myGenres[g] / total * 100 : 0;
+              return React.createElement("div", {
+                key: g,
+                title: g + ": " + myGenres[g] + " (" + Math.round(pct) + "%)",
+                style: {
+                  width: pct + "%",
+                  background: genreColors[idx % genreColors.length],
+                  minWidth: 3
+                }
+              });
+            })
+          ),
+          React.createElement("div", {style: {display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6}},
+            genreKeys.sort(function(a, b) { return myGenres[b] - myGenres[a]; }).slice(0, 8).map(function(g, idx) {
+              return React.createElement("span", {
+                key: g, style: {fontSize: 11, color: C.txt2}
+              }, React.createElement("span", {style: {display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: genreColors[idx % genreColors.length], marginRight: 3}}), g + " " + myGenres[g]);
+            })
+          )
+        );
+      }(),
+
+      // Venue variety
+      function() {
+        var venueKeys = Object.keys(Ce);
+        if (venueKeys.length < 2) return null;
+        var repeat = venueKeys.filter(function(v) { return Ce[v] > 1; });
+        return React.createElement("div", {
+          style: { display: "flex", gap: 10, flexWrap: "wrap" }
+        },
+          le(venueKeys.length, "\u{1F3E0} Unique venues", "#F472B6"),
+          repeat.length > 0 && le(repeat.length, "Venues visited 2+", "#2DD4BF")
+        );
+      }()
+
+    ),
+
+    // --- Spending breakdown ---
+    l > 0 && i > 0 && React.createElement("div", {
+      style: { marginTop: 24, borderTop: "1px solid " + C.border, paddingTop: 18 }
+    },
+      React.createElement("div", {style: {fontSize: 16, fontWeight: 900, marginBottom: 12}}, "\u{1F4B0} Spending breakdown"),
+      function() {
+        var genreSpend = {};
+        r.forEach(function(z) {
+          if (typeof z.s.priceFull === "number" && z.s.genre) {
+            genreSpend[z.s.genre] = (genreSpend[z.s.genre] || 0) + z.s.priceFull;
+          }
+        });
+        var sorted = Object.keys(genreSpend).sort(function(a, b) { return genreSpend[b] - genreSpend[a]; });
+        var maxSpend = sorted.length ? genreSpend[sorted[0]] : 0;
+        if (!sorted.length) return null;
+        var spendColors = ["#F472B6", "#34D399", "#60A5FA", "#FBBF24", "#A78BFA", "#FB923C"];
+        return React.createElement("div", {style: {marginBottom: 14}},
+          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}}, "Spend by genre"),
+          sorted.slice(0, 6).map(function(g, idx) {
+            return React.createElement("div", {key: g, style: {marginBottom: 6}},
+              React.createElement("div", {style: {display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 2}},
+                React.createElement("span", {style: {color: C.txt}}, g),
+                React.createElement("span", {style: {color: spendColors[idx % spendColors.length], fontWeight: 800}}, "\u00A3" + Math.round(genreSpend[g] * 100) / 100)),
+              React.createElement("div", {style: {height: 7, borderRadius: 4, background: "rgba(255,255,255,0.08)"}},
+                React.createElement("div", {style: {height: 7, borderRadius: 4, width: Math.round(genreSpend[g] / maxSpend * 100) + "%", background: spendColors[idx % spendColors.length]}}))
+            );
+          })
+        );
+      }(),
+      // Price per day
+      function() {
+        var daySpend = {};
+        r.forEach(function(z) {
+          if (z.rec.date && typeof z.s.priceFull === "number") {
+            daySpend[z.rec.date] = (daySpend[z.rec.date] || 0) + z.s.priceFull;
+          }
+        });
+        var dates = Object.keys(daySpend).sort();
+        if (dates.length < 2) return null;
+        var maxD = Math.max.apply(null, dates.map(function(d) { return daySpend[d]; }));
+        return React.createElement("div", null,
+          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}}, "Spend by day"),
+          React.createElement("div", {style: {display: "flex", gap: 3, alignItems: "flex-end", height: 70}},
+            dates.map(function(d) {
+              var pct = maxD > 0 ? Math.max(daySpend[d] / maxD * 100, 5) : 5;
+              var dt = new Date(d + "T12:00:00");
+              var lbl = dt.getDate() + "/" + (dt.getMonth() + 1);
+              return React.createElement("div", {
+                key: d,
+                title: d + ": \u00A3" + Math.round(daySpend[d] * 100) / 100,
+                style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }
+              },
+                React.createElement("span", {style: {fontSize: 9, color: C.txt3, fontWeight: 700}}, "\u00A3" + Math.round(daySpend[d])),
+                React.createElement("div", {style: {width: "100%", height: pct + "%", borderRadius: "3px 3px 0 0", background: "linear-gradient(180deg,#34D399,rgba(52,211,153,0.4))"}}),
+                React.createElement("span", {style: {fontSize: 9, color: C.txt3}}, lbl)
+              );
+            })
+          )
+        );
+      }()
+    )
+
+    ), function() {
     var all = n || [];
     if (all.length === 0) return null;
     var totalShows = all.length;
@@ -5830,7 +6176,133 @@ function App() {
         React.createElement("div", {style: {flex: "1 1 280px", padding: "14px 12px", borderRadius: 14, border: "1px solid " + C.border, background: "rgba(255,255,255,0.04)", textAlign: "center"}},
           React.createElement("div", {style: {fontSize: 13, fontWeight: 800, color: C.txt, marginBottom: 2}}, withWarnings + " content warnings"),
           React.createElement("div", {style: {fontSize: 11, color: C.txt2}}, "Shows listing strobe, language, or other advisories"))
-      )
+      ),
+
+      // Price distribution histogram
+      priced.length > 5 && React.createElement("div", {style: {marginTop: 18}},
+        React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}}, "\u{1F4B7} Price distribution"),
+        function() {
+          var buckets = [
+            {label: "Free", min: 0, max: 0, count: freeShows, color: "#4ADE80"},
+            {label: "\u00A31\u2013\u00A35", min: 0.01, max: 5, count: 0, color: "#34D399"},
+            {label: "\u00A36\u2013\u00A310", min: 5.01, max: 10, count: 0, color: "#60A5FA"},
+            {label: "\u00A311\u2013\u00A315", min: 10.01, max: 15, count: 0, color: "#818CF8"},
+            {label: "\u00A316\u2013\u00A320", min: 15.01, max: 20, count: 0, color: "#A78BFA"},
+            {label: "\u00A320+", min: 20.01, max: 9999, count: 0, color: "#F472B6"}
+          ];
+          priced.forEach(function(s) {
+            for (var bi = 1; bi < buckets.length; bi++) {
+              if (s.priceFull >= buckets[bi].min && s.priceFull <= buckets[bi].max) { buckets[bi].count++; break; }
+            }
+          });
+          var maxBucket = Math.max.apply(null, buckets.map(function(b) { return b.count; }));
+          return React.createElement("div", {style: {display: "flex", gap: 4, alignItems: "flex-end", height: 80}},
+            buckets.map(function(b) {
+              var pct = maxBucket > 0 ? Math.max(b.count / maxBucket * 100, b.count > 0 ? 6 : 2) : 2;
+              return React.createElement("div", {
+                key: b.label,
+                style: {flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3}
+              },
+                b.count > 0 && React.createElement("span", {style: {fontSize: 10, fontWeight: 800, color: C.txt2}}, b.count),
+                React.createElement("div", {style: {width: "100%", height: pct + "%", minHeight: 2, borderRadius: "4px 4px 0 0", background: b.color, opacity: b.count > 0 ? 1 : 0.15}}),
+                React.createElement("span", {style: {fontSize: 9, color: C.txt3, fontWeight: 600, textAlign: "center"}}, b.label)
+              );
+            })
+          );
+        }()
+      ),
+
+      // Duration distribution
+      durations.length > 5 && React.createElement("div", {style: {marginTop: 18}},
+        React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}}, "\u23F1 Duration spread"),
+        function() {
+          var durBuckets = [
+            {label: "<30m", min: 0, max: 29, count: 0, color: "#FBBF24"},
+            {label: "30\u201345m", min: 30, max: 45, count: 0, color: "#FB923C"},
+            {label: "46\u201360m", min: 46, max: 60, count: 0, color: "#F472B6"},
+            {label: "61\u201390m", min: 61, max: 90, count: 0, color: "#A78BFA"},
+            {label: "90m+", min: 91, max: 9999, count: 0, color: "#818CF8"}
+          ];
+          durations.forEach(function(s) {
+            for (var bi = 0; bi < durBuckets.length; bi++) {
+              if (s.duration >= durBuckets[bi].min && s.duration <= durBuckets[bi].max) { durBuckets[bi].count++; break; }
+            }
+          });
+          var maxB = Math.max.apply(null, durBuckets.map(function(b) { return b.count; }));
+          return React.createElement("div", {style: {display: "flex", gap: 4, alignItems: "flex-end", height: 70}},
+            durBuckets.map(function(b) {
+              var pct = maxB > 0 ? Math.max(b.count / maxB * 100, b.count > 0 ? 6 : 2) : 2;
+              return React.createElement("div", {
+                key: b.label,
+                style: {flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3}
+              },
+                b.count > 0 && React.createElement("span", {style: {fontSize: 10, fontWeight: 800, color: C.txt2}}, b.count),
+                React.createElement("div", {style: {width: "100%", height: pct + "%", minHeight: 2, borderRadius: "4px 4px 0 0", background: b.color, opacity: b.count > 0 ? 1 : 0.15}}),
+                React.createElement("span", {style: {fontSize: 9, color: C.txt3, fontWeight: 600}}, b.label)
+              );
+            })
+          );
+        }()
+      ),
+
+      // Start time heatmap
+      React.createElement("div", {style: {marginTop: 18}},
+        React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}}, "\u{1F570} Shows by start time"),
+        function() {
+          var hours = {};
+          all.forEach(function(s) {
+            var t = timeToMin_(s.startStr);
+            if (t != null) { var h = Math.floor(t / 60); hours[h] = (hours[h] || 0) + 1; }
+          });
+          var hourKeys = [];
+          for (var hi = 8; hi <= 23; hi++) hourKeys.push(hi);
+          var maxH = Math.max.apply(null, hourKeys.map(function(h) { return hours[h] || 0; }));
+          var peakHour = hourKeys.reduce(function(a, b) { return (hours[a] || 0) >= (hours[b] || 0) ? a : b; });
+          return React.createElement(React.Fragment, null,
+            React.createElement("div", {style: {display: "flex", gap: 2, alignItems: "flex-end", height: 60}},
+              hourKeys.map(function(h) {
+                var count = hours[h] || 0;
+                var pct = maxH > 0 ? Math.max(count / maxH * 100, count > 0 ? 5 : 1) : 1;
+                var isPeak = h === peakHour;
+                return React.createElement("div", {
+                  key: h,
+                  title: h + ":00 \u2014 " + count + " shows",
+                  style: {flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 1}
+                },
+                  React.createElement("div", {style: {width: "100%", height: pct + "%", minHeight: 1, borderRadius: "3px 3px 0 0", background: isPeak ? "#F472B6" : "rgba(168,85,247,0.5)", opacity: count > 0 ? 1 : 0.1}}),
+                  h % 2 === 0 && React.createElement("span", {style: {fontSize: 8, color: C.txt3}}, h + "h")
+                );
+              })
+            ),
+            React.createElement("div", {style: {fontSize: 11, color: C.txt2, marginTop: 4}}, "Peak hour: ", React.createElement("b", null, peakHour + ":00"), " with " + (hours[peakHour] || 0) + " shows")
+          );
+        }()
+      ),
+
+      // Unique artists
+      function() {
+        var artists = {};
+        all.forEach(function(s) { if (s.artist) artists[s.artist] = (artists[s.artist] || 0) + 1; });
+        var artistCount = Object.keys(artists).length;
+        var multiShow = Object.keys(artists).filter(function(a) { return artists[a] > 1; });
+        multiShow.sort(function(a, b) { return artists[b] - artists[a]; });
+        if (artistCount < 2) return null;
+        return React.createElement("div", {style: {marginTop: 18, display: "flex", gap: 10, flexWrap: "wrap"}},
+          React.createElement("div", {style: {padding: "14px 12px", borderRadius: 14, border: "1px solid " + C.border, background: "rgba(255,255,255,0.04)", textAlign: "center", flex: "1 1 130px"}},
+            React.createElement("div", {style: {fontSize: 22, fontWeight: 900, color: "#2DD4BF"}}, artistCount.toLocaleString()),
+            React.createElement("div", {style: {fontSize: 11, color: C.txt2, fontWeight: 600}}, "Unique artists")),
+          multiShow.length > 0 && React.createElement("div", {style: {padding: "14px 12px", borderRadius: 14, border: "1px solid " + C.border, background: "rgba(255,255,255,0.04)", textAlign: "center", flex: "1 1 130px"}},
+            React.createElement("div", {style: {fontSize: 22, fontWeight: 900, color: "#FB923C"}}, multiShow.length),
+            React.createElement("div", {style: {fontSize: 11, color: C.txt2, fontWeight: 600}}, "Artists with 2+ shows")),
+          multiShow.length > 0 && React.createElement("div", {style: {padding: "14px 12px", borderRadius: 14, border: "1px solid " + C.border, background: "rgba(255,255,255,0.04)", flex: "2 1 200px"}},
+            React.createElement("div", {style: {fontSize: 11, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}, "Busiest artists"),
+            multiShow.slice(0, 5).map(function(a, idx) {
+              return React.createElement("div", {key: a, style: {fontSize: 12, color: C.txt2, padding: "2px 0"}}, (idx + 1) + ". " + a + " (" + artists[a] + " shows)");
+            })
+          )
+        );
+      }()
+
     );
   }(), AI_ENABLED && function() {
     var METRIC_COLORS = ["#F472B6","#34D399","#60A5FA","#FBBF24","#A78BFA","#FB923C","#2DD4BF","#F87171","#818CF8","#4ADE80"];
@@ -6489,6 +6961,58 @@ function App() {
         lineHeight: 1.3
       }
     }, "\u{1F4C5} Download"), React.createElement("button", {
+      onClick: function() {
+        var showMap = {};
+        (n || []).forEach(function(s) { showMap[s.code] = s; });
+        var rows = [["Show", "Artist", "Date", "Start", "End", "Price", "Genre", "Tags", "Venue", "Venue Address", "Rating", "Notes", "Companions"]];
+        Object.keys(p).forEach(function(code) {
+          (p[code] || []).forEach(function(rec) {
+            var s = showMap[code];
+            if (!s) return;
+            var r = ratings[code] || "";
+            var note = (se[code] || "").replace(/[\n\r]+/g, " ");
+            var comp = companions[code] || "";
+            rows.push([
+              '"' + (s.title || "").replace(/"/g, '""') + '"',
+              '"' + (s.artist || "").replace(/"/g, '""') + '"',
+              rec.date || "",
+              rec.start || s.startStr || "",
+              rec.end || s.endStr || "",
+              s.priceFull != null ? s.priceFull : "",
+              '"' + (s.genre || "").replace(/"/g, '""') + '"',
+              '"' + (s.tags || []).join(", ").replace(/"/g, '""') + '"',
+              '"' + (s.venue || "").replace(/"/g, '""') + '"',
+              '"' + ([s.venueAddr, s.venuePostcode].filter(Boolean).join(", ")).replace(/"/g, '""') + '"',
+              r ? r + "/5" : "",
+              '"' + note.replace(/"/g, '""') + '"',
+              '"' + comp.replace(/"/g, '""') + '"'
+            ]);
+          });
+        });
+        var csv = rows.map(function(r) { return r.join(","); }).join("\n");
+        var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "fringe-bookings.csv";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      },
+      title: "Export bookings to CSV (for Excel)",
+      style: {
+        padding: "7px 14px",
+        borderRadius: 8,
+        border: "1px solid " + C.border,
+        background: "transparent",
+        color: C.txt2,
+        fontSize: 12,
+        fontWeight: 800,
+        cursor: "pointer",
+        lineHeight: 1.3
+      }
+    }, "\u{1F4CA} Export"), React.createElement("button", {
       onClick: function() { setShareMode(!shareMode); setShareSel(new Set()); setShareCopied(false); },
       style: {
         padding: "7px 14px",
@@ -6519,7 +7043,22 @@ function App() {
       title: bkShowPast ? "Hide past shows" : "Show past shows",
       "aria-label": bkShowPast ? "Hide past shows" : "Show past shows",
       style: {padding: "7px 12px", borderRadius: 8, border: "1px solid " + (bkShowPast ? C.accent : C.border), background: bkShowPast ? "rgba(168,85,247,0.15)" : "transparent", color: bkShowPast ? C.accent : C.txt2, fontSize: 15, cursor: "pointer"}
-    }, bkShowPast ? "\u{1F441}" : "\u{1F441}\u200D\u{1F5E8}"))),
+    }, bkShowPast ? "\u{1F441}" : "\u{1F441}\u200D\u{1F5E8}"),
+    React.createElement("button", {
+      onClick: function() { setAddShowOpen(true); setAddShowQ(""); },
+      title: "Add a show to your bookings",
+      style: {
+        padding: "7px 14px",
+        borderRadius: 8,
+        border: "1px solid " + C.border,
+        background: "rgba(52,211,153,0.12)",
+        color: "#34d399",
+        fontSize: 12,
+        fontWeight: 800,
+        cursor: "pointer",
+        lineHeight: 1.3
+      }
+    }, "\u2795 Add show"))),
     sharedBookings && sharedBookings.length > 0 && React.createElement("div", {
       style: {
         background: "rgba(52,211,153,0.12)",
@@ -8238,7 +8777,107 @@ function App() {
     onRate: function(code, val) { setRatings(function(prev) { var next = Object.assign({}, prev); if (val) next[code] = val; else delete next[code]; return next; }); },
     companion: oe ? (companions[oe.code] || "") : "",
     onCompanion: function(code, val) { setCompanions(function(prev) { var next = Object.assign({}, prev); if (val) next[code] = val; else delete next[code]; return next; }); }
-  }), S && React.createElement(BookModal, {
+  }), addShowOpen && React.createElement("div", {
+    onClick: function(ev) { if (ev.target === ev.currentTarget) { setAddShowOpen(false); } },
+    style: {
+      position: "fixed",
+      inset: 0,
+      zIndex: 9998,
+      background: "rgba(0,0,0,0.6)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 16
+    }
+  }, React.createElement("div", {
+    style: {
+      background: C.bg,
+      borderRadius: 16,
+      border: "1px solid " + C.border,
+      width: "100%",
+      maxWidth: 480,
+      maxHeight: "80vh",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden"
+    }
+  }, React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: "16px 20px 12px",
+      borderBottom: "1px solid " + C.border
+    }
+  }, React.createElement("span", {
+    style: { fontSize: 16, fontWeight: 800, color: C.txt }
+  }, "\u2795 Add a show"), React.createElement("button", {
+    onClick: function() { setAddShowOpen(false); },
+    style: { border: "none", background: "transparent", fontSize: 20, color: C.txt2, cursor: "pointer" }
+  }, "\u2715")), React.createElement("div", {
+    style: { padding: "12px 20px" }
+  }, React.createElement("input", {
+    value: addShowQ,
+    onChange: function(ev) { setAddShowQ(ev.target.value); },
+    placeholder: "\u{1F50D} Search for a show\u2026",
+    autoFocus: true,
+    style: {
+      width: "100%",
+      padding: "10px 14px",
+      borderRadius: 10,
+      border: "1px solid " + C.border,
+      background: C.card,
+      color: C.txt,
+      fontSize: 14,
+      outline: "none",
+      boxSizing: "border-box"
+    }
+  })), React.createElement("div", {
+    style: {
+      flex: 1,
+      overflowY: "auto",
+      padding: "0 20px 16px"
+    }
+  }, function() {
+    if (!addShowQ.trim() || !n) return React.createElement("div", {
+      style: { textAlign: "center", color: C.txt3, fontSize: 13, padding: "20px 0" }
+    }, "Type to search for a show to add to your bookings.");
+    var q = addShowQ.toLowerCase();
+    var matches = n.filter(function(s) {
+      return (s.title + " " + s.artist + " " + s.venue + " " + s.genre).toLowerCase().indexOf(q) >= 0;
+    }).slice(0, 20);
+    if (!matches.length) return React.createElement("div", {
+      style: { textAlign: "center", color: C.txt3, fontSize: 13, padding: "20px 0" }
+    }, "No shows found.");
+    return matches.map(function(s) {
+      var isBooked = p[s.code] && p[s.code].length > 0;
+      return React.createElement("div", {
+        key: s.code,
+        onClick: function() { setAddShowOpen(false); Be(s); },
+        style: {
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 12px",
+          borderRadius: 10,
+          cursor: "pointer",
+          marginBottom: 4,
+          background: isBooked ? "rgba(52,211,153,0.08)" : "transparent",
+          border: "1px solid " + (isBooked ? "rgba(52,211,153,0.2)" : "transparent")
+        }
+      }, React.createElement("div", {
+        style: { flex: 1, minWidth: 0 }
+      }, React.createElement("div", {
+        style: { fontWeight: 700, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }
+      }, s.title), React.createElement("div", {
+        style: { fontSize: 12, color: C.txt2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }
+      }, s.artist, s.artist && s.venue ? " \u00B7 " : "", s.venue, priceLabel(s.priceFull) ? " \u00B7 " + priceLabel(s.priceFull) : "")), isBooked && React.createElement("span", {
+        style: { fontSize: 11, color: "#34d399", fontWeight: 700, flexShrink: 0 }
+      }, "\u2713 Booked"), React.createElement("span", {
+        style: { fontSize: 18, flexShrink: 0 }
+      }, "\u{1F39F}\uFE0F"));
+    });
+  }()))), S && React.createElement(BookModal, {
     s: S,
     onConfirm: kn,
     onClose: () => I(null)
