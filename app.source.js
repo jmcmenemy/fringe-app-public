@@ -2933,7 +2933,7 @@ function Detail({
   }, "\u{1F4C5} Preferred date:"), React.createElement("input", {
     type: "date",
     value: p || "",
-    min: t.first || void 0,
+    min: function() { var td = new Date(); return td.getFullYear() + "-" + ("0"+(td.getMonth()+1)).slice(-2) + "-" + ("0"+td.getDate()).slice(-2); }(),
     max: t.last || void 0,
     onChange: S => h(t.code, S.target.value),
     style: {
@@ -2954,9 +2954,9 @@ function BookModal({
   onClose: o
 }) {
   const a = /^\d{1,2}:\d{2}$/.test(t.startStr || ""),
-    [s, d] = React.useState(t.first || ""),
-    [w, p] = React.useState(a ? t.startStr : ""),
-    [h, b] = React.useState(a && t.endStr || ""),
+    [s, d] = React.useState(function() { var td = new Date(); var today = td.getFullYear() + "-" + ("0"+(td.getMonth()+1)).slice(-2) + "-" + ("0"+td.getDate()).slice(-2); return t.first && t.first > today ? t.first : today; }()),
+    [w, p] = React.useState(function() { if (a) return t.startStr; var td = new Date(); var today = td.getFullYear() + "-" + ("0"+(td.getMonth()+1)).slice(-2) + "-" + ("0"+td.getDate()).slice(-2); var dayP = (t.performances || []).filter(function(pf) { return pf.date === (t.first && t.first > today ? t.first : today) && pf.start; }); return dayP.length ? dayP[0].start : ""; }()),
+    [h, b] = React.useState(function() { if (a) return t.endStr || ""; var td = new Date(); var today = td.getFullYear() + "-" + ("0"+(td.getMonth()+1)).slice(-2) + "-" + ("0"+td.getDate()).slice(-2); var dayP = (t.performances || []).filter(function(pf) { return pf.date === (t.first && t.first > today ? t.first : today) && pf.start; }); return dayP.length ? dayP[0].end || "" : ""; }()),
     y = {
       boxSizing: "border-box",
       padding: "9px 11px",
@@ -3018,9 +3018,18 @@ function BookModal({
   }, "Date you booked"), React.createElement("input", {
     type: "date",
     value: s,
-    min: t.first || void 0,
+    min: function() { var td = new Date(); return td.getFullYear() + "-" + ("0"+(td.getMonth()+1)).slice(-2) + "-" + ("0"+td.getDate()).slice(-2); }(),
     max: t.last || void 0,
-    onChange: g => d(g.target.value),
+    onChange: function(g) {
+      var newDate = g.target.value;
+      d(newDate);
+      // Auto-select first available time for this date
+      if (!a && t.performances) {
+        var dayPerfs = t.performances.filter(function(pf) { return pf.date === newDate && pf.start; });
+        if (dayPerfs.length > 0) { p(dayPerfs[0].start); b(dayPerfs[0].end || ""); }
+        else { p(""); b(""); }
+      }
+    },
     style: {
       ...y,
       width: "100%",
@@ -3028,39 +3037,59 @@ function BookModal({
       maxWidth: "100%",
       marginBottom: 12
     }
-  }), !a && React.createElement(React.Fragment, null, React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: C.txt3,
-      marginBottom: 6
+  }), !a && React.createElement(React.Fragment, null, function() {
+    var perfs = (t.performances || []).filter(function(pf) { return pf.date === s; });
+    if (perfs.length > 0) {
+      // Show available time slots as clickable chips
+      // Deduplicate by start time
+      var seen = {};
+      var unique = perfs.filter(function(pf) {
+        if (!pf.start || seen[pf.start]) return false;
+        seen[pf.start] = true;
+        return true;
+      });
+      return React.createElement("div", {style: {marginBottom: 12}},
+        React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, marginBottom: 6}}, "Pick a time:"),
+        React.createElement("div", {style: {display: "flex", gap: 6, flexWrap: "wrap"}},
+          unique.map(function(pf) {
+            var selected = w === pf.start;
+            return React.createElement("button", {
+              key: pf.start,
+              type: "button",
+              onClick: function() { p(pf.start); b(pf.end || ""); },
+              style: {
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: "1px solid " + (selected ? C.accent : C.border),
+                background: selected ? "rgba(168,85,247,0.18)" : "transparent",
+                color: selected ? C.accent : C.txt,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 2
+              }
+            },
+              React.createElement("span", null, pf.start + (pf.end ? " \u2013 " + pf.end : "")),
+              pf.duration ? React.createElement("span", {style: {fontSize: 10, color: C.txt3}}, pf.duration + " min") : null,
+              pf.exhausted ? React.createElement("span", {style: {fontSize: 10, color: "#F87171", fontWeight: 800}}, "Sold out") :
+                pf.pct != null && pf.pct < 30 ? React.createElement("span", {style: {fontSize: 10, color: "#FBBF24", fontWeight: 800}}, "Low availability") : null
+            );
+          })
+        ),
+        w && React.createElement("div", {style: {fontSize: 12, color: C.txt2, marginTop: 6}}, "\u2705 " + w + (h ? " \u2013 " + h : ""))
+      );
     }
-  }, "This show has various times \u2014 enter your slot:"), React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 8,
-      marginBottom: 12
-    }
-  }, React.createElement("input", {
-    type: "time",
-    value: w,
-    onChange: g => p(g.target.value),
-    style: {
-      ...y,
-      flex: 1,
-      minWidth: 0,
-      boxSizing: "border-box"
-    }
-  }), React.createElement("input", {
-    type: "time",
-    value: h,
-    onChange: g => b(g.target.value),
-    style: {
-      ...y,
-      flex: 1,
-      minWidth: 0,
-      boxSizing: "border-box"
-    }
-  }))), React.createElement("div", {
+    // No performances for selected date or no performances data - show freeform
+    return React.createElement("div", {style: {marginBottom: 12}},
+      React.createElement("div", {style: {fontSize: 12, color: C.txt3, marginBottom: 6}}, s ? "Enter your time slot:" : "Pick a date first, then choose a time."),
+      s && React.createElement("div", {style: {display: "flex", gap: 8}},
+        React.createElement("input", {type: "time", value: w, onChange: function(ev) { p(ev.target.value); }, placeholder: "Start", style: {...y, flex: 1, minWidth: 0, boxSizing: "border-box"}}),
+        React.createElement("input", {type: "time", value: h, onChange: function(ev) { b(ev.target.value); }, placeholder: "End", style: {...y, flex: 1, minWidth: 0, boxSizing: "border-box"}}))
+    );
+  }()), React.createElement("div", {
     style: {
       display: "flex",
       gap: 8,
@@ -4465,7 +4494,7 @@ function App() {
       h(l => ({
         ...l,
         [e]: (l[e] || []).concat([r])
-      })), I(null), clearFilters()
+      })), I(null)
     },
     $t = (e, idx) => h(r => {
       const l = {
