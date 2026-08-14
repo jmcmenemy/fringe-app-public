@@ -2816,7 +2816,7 @@ function Detail({
       textDecoration: "none"
     }
   }, React.createElement(LinkIcon, null)),
-  React.createElement("div", {style: {display: "inline-flex", alignItems: "center", gap: 2, marginLeft: 6, position: "relative"}},
+  React.createElement("div", {style: {display: "inline-flex", alignItems: "center", gap: 2, marginLeft: "auto", position: "relative"}},
     React.createElement("button", {
       onClick: function() { setRatingOpen(!ratingOpen); },
       title: _rating ? "Your rating: " + _rating + "/5" : "Rate this show",
@@ -2837,7 +2837,7 @@ function Detail({
   React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: (typeof window !== "undefined" && window.innerWidth > 640) ? "1fr 1fr 1fr 1fr" : "1fr 1fr",
       gap: "8px 12px",
       margin: "6px 0 0",
       padding: "12px 14px",
@@ -2925,7 +2925,7 @@ function Detail({
             onChange: function(ev) { var v = ev.target.value; updateBk && updateBk(t.code, bi, { price: v === "" ? null : parseFloat(v) }); },
             placeholder: "0",
             "aria-label": "Price paid",
-            style: { width: 48, padding: "4px 6px", borderRadius: 6, border: "1px solid " + C.border, background: "rgba(255,255,255,0.06)", color: C.txt, fontSize: 12, outline: "none", textAlign: "right" }
+            style: { width: 64, padding: "4px 6px", borderRadius: 6, border: "1px solid " + C.border, background: "rgba(255,255,255,0.06)", color: C.txt, fontSize: 12, outline: "none", textAlign: "right" }
           })),
         React.createElement("button", {
         onClick: function() { if (window.confirm("Remove this booking" + (bk.date ? " on " + bk.date : "") + "?")) { removeB(t.code, bi); if (bkList.length <= 1) b(); } },
@@ -2937,27 +2937,51 @@ function Detail({
   React.createElement("div", {
     style: {fontSize: 11, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5}
   }, "Going with"),
-  _companion ? React.createElement("div", {style: {fontSize: 14, color: C.txt, marginTop: 2, display: "flex", alignItems: "center", gap: 6}},
-    _companion, React.createElement("button", {
-    onClick: function() { _onCompanion(t.code, ""); },
-    style: {background: "none", border: "none", color: C.txt3, cursor: "pointer", fontSize: 11, padding: 0, lineHeight: 1}
-  }, "\u2715")) : compEdit ? React.createElement("div", {
-    style: {display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginTop: 2}
-  }, React.createElement("input", {
-    type: "text",
-    value: compInput,
-    onChange: function(ev) { setCompInput(ev.target.value); },
-    onKeyDown: function(ev) { if (ev.key === "Enter" && compInput.trim()) { _onCompanion(t.code, compInput.trim()); setCompEdit(false); setCompInput(""); } if (ev.key === "Escape") { setCompEdit(false); setCompInput(""); } },
-    placeholder: "Name\u2026",
-    autoFocus: true,
-    style: {padding: "5px 10px", borderRadius: 8, border: "1px solid " + C.border, background: "rgba(255,255,255,0.06)", color: C.txt, fontSize: 12, width: 80, outline: "none"}
-  }), React.createElement("button", {
-    onClick: function() { if (compInput.trim()) { _onCompanion(t.code, compInput.trim()); setCompEdit(false); setCompInput(""); } },
-    style: {padding: "4px 10px", borderRadius: 8, border: "none", background: C.accent, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer"}
-  }, "\u2713")) : React.createElement("button", {
-    onClick: function() { setCompEdit(true); },
-    style: {padding: "4px 12px", borderRadius: 8, border: "1px dashed " + C.border, background: "transparent", color: C.txt3, fontSize: 12, cursor: "pointer", marginTop: 2}
-  }, "+ Add"))); })(),
+  (function() {
+    var people = _companion ? _companion.split(",").map(function(s) { return s.trim(); }).filter(Boolean) : [];
+    function removePerson(name) {
+      var updated = people.filter(function(p) { return p !== name; }).join(", ");
+      _onCompanion(t.code, updated);
+    }
+    function addPerson(name) {
+      var updated = people.concat(name).join(", ");
+      _onCompanion(t.code, updated);
+    }
+    return React.createElement("div", {style: {marginTop: 4, display: "flex", flexDirection: "column", gap: 4}},
+      people.length > 0 && React.createElement("div", {style: {display: "flex", gap: 4, flexWrap: "wrap"}},
+        people.map(function(person, idx) {
+          return React.createElement("span", {
+            key: idx,
+            style: {display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(168,85,247,0.12)", borderRadius: 14, padding: "3px 8px 3px 6px", fontSize: 12, color: C.txt, fontWeight: 600}
+          }, React.createElement("svg", {width: 14, height: 14, viewBox: "0 0 24 24", fill: "currentColor", style: {opacity: 0.6, flexShrink: 0}},
+            React.createElement("path", {d: "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"})),
+          person,
+          React.createElement("button", {
+            onClick: function() { removePerson(person); },
+            style: {background: "none", border: "none", color: C.txt3, cursor: "pointer", fontSize: 10, padding: 0, marginLeft: 2, lineHeight: 1}
+          }, "\u2715"));
+        })),
+      compEdit ? React.createElement("div", {
+        style: {display: "flex", gap: 4, alignItems: "center"}
+      }, React.createElement("input", {
+        type: "text",
+        value: compInput,
+        onChange: function(ev) { setCompInput(ev.target.value); },
+        onKeyDown: function(ev) {
+          if (ev.key === "Enter" && compInput.trim()) { addPerson(compInput.trim()); setCompEdit(false); setCompInput(""); }
+          if (ev.key === "Escape") { setCompEdit(false); setCompInput(""); }
+        },
+        placeholder: "Name\u2026",
+        autoFocus: true,
+        style: {padding: "4px 8px", borderRadius: 8, border: "1px solid " + C.border, background: "rgba(255,255,255,0.06)", color: C.txt, fontSize: 12, width: 80, outline: "none"}
+      }), React.createElement("button", {
+        onClick: function() { if (compInput.trim()) { addPerson(compInput.trim()); setCompEdit(false); setCompInput(""); } },
+        style: {padding: "3px 8px", borderRadius: 8, border: "none", background: C.accent, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer"}
+      }, "\u2713")) : React.createElement("button", {
+        onClick: function() { setCompEdit(true); },
+        style: {padding: "3px 10px", borderRadius: 8, border: "1px dashed " + C.border, background: "transparent", color: C.txt3, fontSize: 11, cursor: "pointer"}
+      }, "+ Add"));
+  })())); })(),
   n && !o && h && React.createElement("div", {
     style: {display: "flex", alignItems: "center", gap: 8, marginTop: 8}
   }, React.createElement("span", {
@@ -2985,6 +3009,7 @@ function Detail({
     }
   }, React.createElement("textarea", {
     value: a || "",
+    "data-notes-input": true,
     onChange: S => s(t.code, S.target.value),
     "aria-label": "Private note for this show",
     placeholder: "Notes (private, this device only)\u2026",
@@ -3845,7 +3870,9 @@ function FilterControls({
     value: "late"
   }, "\u{1F319} Late (10pm\u20136am)")), function() {
     var compVals = Object.values(companions).filter(function(v) { return v && v.trim(); });
-    var uniqueComps = Array.from(new Set(compVals)).sort();
+    var allNames = [];
+    compVals.forEach(function(v) { v.split(",").forEach(function(n) { var nm = n.trim(); if (nm) allNames.push(nm); }); });
+    var uniqueComps = Array.from(new Set(allNames)).sort();
     if (uniqueComps.length === 0) return null;
     return React.createElement("select", {
       "aria-label": "Going with",
@@ -4839,7 +4866,7 @@ function App() {
         const i = Pe.toLowerCase();
         if (!(e.title + " " + e.artist + " " + e.venue + " " + e.genre + " " + e.tags.join(" ") + " " + e.teaser).toLowerCase().includes(i)) return !1
       }
-      if (compFilter && companions[e.code] !== compFilter) return !1;
+      if (compFilter && !(companions[e.code] && companions[e.code].split(",").some(function(n) { return n.trim() === compFilter; }))) return !1;
       return !0
     },
     Xe = useMemo(() => n ? n.filter(an) : [], [n, Pe, _e, Ve, He, Ae, Ne, Ee, nt, We, De, Ue, Ge, Je, we, qe, Ye, $, It, compFilter, companions]),
@@ -5460,7 +5487,9 @@ function App() {
           return { code: z, rec: rec, s: e[z], bIdx: ri }
         })
       }).filter(function(z) {
-        return z.s
+        if (!z.s) return false;
+        if (compFilter && !(companions[z.code] && companions[z.code].split(",").some(function(n) { return n.trim() === compFilter; }))) return false;
+        return true;
       }),
       l = r.length,
       i = r.reduce(function(z, L) {
@@ -7312,7 +7341,7 @@ function App() {
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap"
               }
-            }, "\u{1F550} ", m.rec.start || m.s.startStr || "?", m.rec.end || m.s.endStr ? "\u2013" + (m.rec.end || m.s.endStr) : "", " \xB7 ", m.s.venue, m.s.venueCode ? " (#" + m.s.venueCode + ")" : "", priceLabel(m.s.priceFull) ? " \xB7 " + priceLabel(m.s.priceFull) : ""), he && React.createElement("a", {
+            }, "\u{1F550} ", m.rec.start || m.s.startStr || "?", m.rec.end || m.s.endStr ? "\u2013" + (m.rec.end || m.s.endStr) : "", " \xB7 ", m.s.venue, m.s.venueCode ? " (#" + m.s.venueCode + ")" : "", (function() { var ep = m.rec.price != null ? "\u00a3" + m.rec.price : priceLabel(m.s.priceFull); return ep ? " \xB7 " + ep : ""; })()), he && React.createElement("a", {
               href: mapsUrl(m.s),
               target: "_blank",
               rel: "noopener noreferrer",
