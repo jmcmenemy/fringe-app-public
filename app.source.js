@@ -1413,15 +1413,7 @@ function ShowCard({
       color: C.txt2,
       marginTop: 3
     }
-  }, "\u{1F550} ", t.startStr, t.endStr ? "\u2013" + t.endStr : "", t.duration ? " \xB7 " + t.duration + " min" : ""), h.price !== !1 && React.createElement("div", {
-    style: {
-      fontSize: 15,
-      fontWeight: 800,
-      marginTop: 4,
-      textAlign: "right",
-      color: priceLabel(t.priceFull) === "Free" ? "#34d399" : C.txt
-    }
-  }, priceLabel(t.priceFull)), !_compact && h.genre !== !1 && React.createElement("div", {
+  }, "\u{1F550} ", t.startStr, t.endStr ? "\u2013" + t.endStr : "", t.duration ? " \xB7 " + t.duration + " min" : ""), !_compact && h.genre !== !1 && React.createElement("div", {
     style: {
       display: "flex",
       gap: 4,
@@ -1476,7 +1468,14 @@ function ShowCard({
       background: "transparent",
       color: C.txt2
     }
-  }, React.createElement(LinkIcon, null))))
+  }, React.createElement(LinkIcon, null)), h.price !== !1 && React.createElement("span", {
+    style: {
+      marginLeft: "auto",
+      fontSize: 15,
+      fontWeight: 800,
+      color: priceLabel(t.priceFull) === "Free" ? "#34d399" : C.txt
+    }
+  }, priceLabel(t.priceFull))))
 }
 
 function fetchAdminEmail(t) {
@@ -2626,6 +2625,7 @@ function Detail({
   onToggle: d,
   onBook: w,
   onRemoveBooking: removeB,
+  onUpdateBooking: updateBk,
   bookings: bkList,
   wdate: p,
   onWDate: h,
@@ -2899,8 +2899,10 @@ function Detail({
       background: "rgba(239,68,68,0.08)"
     }
   }, "\u26A0\uFE0F", React.createElement("span", {"data-warn": true, style: {display: "none", fontSize: 12, color: "#fca5a5"}}, " ", t.warnings)),
-  o && removeB && bkList && bkList.length > 0 && React.createElement("div", {
-    style: { marginTop: 12, display: "flex", gap: 8, alignItems: "stretch" }
+  o && removeB && bkList && bkList.length > 0 && (function() {
+    var _mob = typeof window !== "undefined" && window.innerWidth <= 640;
+    return React.createElement("div", {
+    style: { marginTop: 12, display: "flex", flexDirection: _mob ? "column" : "row", gap: 8, alignItems: _mob ? "stretch" : "stretch" }
   },
   React.createElement("div", {
     style: { flex: "1 1 auto", minWidth: 0, background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.2)", borderRadius: 12, padding: "12px 14px" }
@@ -2908,15 +2910,28 @@ function Detail({
     React.createElement("span", { style: { fontSize: 11, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 } }, "Booked" + (bkList.length > 1 ? " (" + bkList.length + ")" : ""))),
   bkList.map(function(bk, bi) {
     var dateStr = (function() { try { var dt = new Date(bk.date + "T12:00:00"); return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()] + " " + dt.getDate() + "/" + (dt.getMonth()+1); } catch(e) { return bk.date || "No date"; } })();
-    return React.createElement("div", { key: bi, style: { display: "flex", alignItems: "center", gap: 10, padding: "6px 0", borderTop: bi > 0 ? "1px solid rgba(96,165,250,0.1)" : "none" } },
-      React.createElement("div", {style: {flex: 1}},
+    return React.createElement("div", { key: bi, style: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: bi > 0 ? "1px solid rgba(96,165,250,0.1)" : "none", flexWrap: "wrap" } },
+      React.createElement("div", {style: {flex: "1 1 auto", minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}},
         React.createElement("span", { style: { fontSize: 14, fontWeight: 800, color: C.txt } }, dateStr),
         React.createElement("span", { style: { fontSize: 13, color: C.txt2, marginLeft: 8 } }, (bk.start || "") + (bk.end ? " \u2013 " + bk.end : ""))),
-      React.createElement("button", {
+      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, flexShrink: 0 } },
+        React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }, title: "Price paid" },
+          React.createElement("span", { style: { fontSize: 11, color: C.txt3 } }, "\u00a3"),
+          React.createElement("input", {
+            type: "number",
+            min: 0,
+            step: "0.01",
+            value: bk.price != null ? bk.price : (typeof t.priceFull === "number" ? t.priceFull : ""),
+            onChange: function(ev) { var v = ev.target.value; updateBk && updateBk(t.code, bi, { price: v === "" ? null : parseFloat(v) }); },
+            placeholder: "0",
+            "aria-label": "Price paid",
+            style: { width: 48, padding: "4px 6px", borderRadius: 6, border: "1px solid " + C.border, background: "rgba(255,255,255,0.06)", color: C.txt, fontSize: 12, outline: "none", textAlign: "right" }
+          })),
+        React.createElement("button", {
         onClick: function() { if (window.confirm("Remove this booking" + (bk.date ? " on " + bk.date : "") + "?")) { removeB(t.code, bi); if (bkList.length <= 1) b(); } },
         "aria-label": "Remove booking on " + (bk.date || "this date"),
         style: { padding: "4px 8px", borderRadius: 8, border: "none", background: "rgba(239,68,68,0.18)", color: "#f87171", fontWeight: 700, fontSize: 12, cursor: "pointer" }
-      }, "\u2715"));
+      }, "\u2715")));
   })),
   React.createElement("div", {style: {flexShrink: 0, minWidth: 100, display: "flex", flexDirection: "column", gap: 6, padding: "12px 14px", borderRadius: 12, border: "1px solid " + C.border, background: "rgba(255,255,255,0.03)"}},
   React.createElement("div", {
@@ -2942,7 +2957,7 @@ function Detail({
   }, "\u2713")) : React.createElement("button", {
     onClick: function() { setCompEdit(true); },
     style: {padding: "4px 12px", borderRadius: 8, border: "1px dashed " + C.border, background: "transparent", color: C.txt3, fontSize: 12, cursor: "pointer", marginTop: 2}
-  }, "+ Add"))),
+  }, "+ Add"))); })(),
   n && !o && h && React.createElement("div", {
     style: {display: "flex", alignItems: "center", gap: 8, marginTop: 8}
   }, React.createElement("span", {
@@ -4550,6 +4565,13 @@ function App() {
         delete l[e];
       }
       return l
+    }),
+    updateBk_ = (code, idx, updates) => h(r => {
+      const l = { ...r };
+      if (Array.isArray(l[code]) && l[code][idx]) {
+        l[code] = l[code].map(function(rec, i) { return i === idx ? Object.assign({}, rec, updates) : rec; });
+      }
+      return l;
     }),
     Be = e => { I(e) },
     Cn = (e, r) => g(l => {
@@ -7258,7 +7280,7 @@ function App() {
                 border: "1px solid " + (shareMode && shareSel.has(shareKey) ? "rgba(168,85,247,0.4)" : C.border),
                 borderLeft: "4px solid " + orgColor(m.s.venue)
               }
-            }, React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, minWidth: 0, width: "100%" } }, shareMode && React.createElement("input", {
+            }, React.createElement("div", { onClick: function(ev) { if (ev.target.closest("a, button, input, select, label")) return; de(m.s); }, style: { display: "flex", alignItems: "center", gap: 10, minWidth: 0, width: "100%", cursor: "pointer" } }, shareMode && React.createElement("input", {
               type: "checkbox",
               checked: shareSel.has(shareKey),
               onChange: function() {
@@ -7270,13 +7292,9 @@ function App() {
               },
               style: { width: 18, height: 18, accentColor: "var(--accent)", cursor: "pointer", flexShrink: 0 }
             }), React.createElement("div", {
-              onClick: function() {
-                de(m.s)
-              },
               style: {
                 flex: 1,
-                minWidth: 0,
-                cursor: "pointer"
+                minWidth: 0
               }
             }, React.createElement("div", {
               style: {
@@ -8751,6 +8769,7 @@ function App() {
     onToggle: () => oe && Se(oe.code),
     onBook: e => Be(e),
     onRemoveBooking: $t,
+    onUpdateBooking: updateBk_,
     bookings: oe ? (p[oe.code] || []) : [],
     wdate: oe && y[oe.code],
     onWDate: Cn,
