@@ -27,6 +27,22 @@ const {
 };
 var THEME = "dark";
 const gcolor = t => THEME === "nocolor" ? "#7c789a" : GENRE_COLOR[t] || "#64748b";
+var TAG_PALETTE = ["#f472b6","#ffba08","#a855f7","#22c55e","#f97316","#3b82f6","#14b8a6","#eab308","#e11d48","#8b5cf6","#ec4899","#10b981","#d97706","#0ea5e9","#ef4444","#06b6d4","#84cc16","#f59e0b"];
+var _tagColorCache = {};
+var _genreColorsUsed = Object.values(GENRE_COLOR);
+function tagColor(t) {
+  if (!t) return "#a855f7";
+  if (_tagColorCache[t]) return _tagColorCache[t];
+  if (GENRE_COLOR[t]) { _tagColorCache[t] = GENRE_COLOR[t]; return GENRE_COLOR[t]; }
+  var used = Object.values(_tagColorCache).concat(_genreColorsUsed);
+  for (var i = 0; i < TAG_PALETTE.length; i++) {
+    if (used.indexOf(TAG_PALETTE[i]) < 0) { _tagColorCache[t] = TAG_PALETTE[i]; return TAG_PALETTE[i]; }
+  }
+  var h = 0;
+  for (var j = 0; j < t.length; j++) h = (h * 31 + t.charCodeAt(j)) & 0xffff;
+  _tagColorCache[t] = TAG_PALETTE[h % TAG_PALETTE.length];
+  return _tagColorCache[t];
+}
 
 function sanitizeAIInput(str) {
   if (typeof str !== "string") return "";
@@ -1412,7 +1428,8 @@ function ShowCard({
   }, t.genre && React.createElement(Tag, {
     color: gcolor(t.genre)
   }, t.genre), t.tags.slice(0, 2).map((g, S) => React.createElement(Tag, {
-    key: S
+    key: S,
+    color: tagColor(g)
   }, g)))), React.createElement("div", {
     style: {
       display: "flex",
@@ -2697,11 +2714,13 @@ function Detail({
   rating: _rating,
   onRate: _onRate,
   companion: _companion,
-  onCompanion: _onCompanion
+  onCompanion: _onCompanion,
+  onUpdateBooking: updateBk
 }) {
   var [ratingOpen, setRatingOpen] = useState(false);
   var [compEdit, setCompEdit] = useState(false);
   var [compInput, setCompInput] = useState("");
+  var [descOpen, setDescOpen] = useState(false);
   return t ? React.createElement("div", {
     onClick: b,
     onKeyDown: function(S) {
@@ -2782,11 +2801,12 @@ function Detail({
   }, t.genre && React.createElement(Tag, {
     color: gcolor(t.genre)
   }, t.genre), t.tags.map((S, I) => React.createElement(Tag, {
-    key: I
+    key: I,
+    color: tagColor(S)
   }, S))), React.createElement("div", {
     style: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: (typeof window !== "undefined" && window.innerWidth > 640) ? "1fr 1fr 1fr 1fr" : "1fr 1fr",
       gap: "8px 12px",
       margin: "6px 0 0",
       padding: "12px 14px",
@@ -2817,16 +2837,21 @@ function Detail({
     label: "Performances",
     value: t.perfs || "\u2014"
   })), t.description && React.createElement("div", {
-    style: {
-      fontSize: 13,
-      color: C.txt2,
-      lineHeight: 1.5,
-      maxHeight: 140,
-      overflow: "auto",
-      marginTop: 10,
-      marginBottom: 6
-    }
-  }, t.description), t.warnings && t.warnings !== "None" && React.createElement("span", {
+      style: { marginTop: 8, padding: "12px 14px", borderRadius: 12, border: "1px solid " + C.border, background: "rgba(255,255,255,0.03)", cursor: "pointer" },
+      onClick: function() { setDescOpen(!descOpen); }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 13,
+        color: C.txt2,
+        lineHeight: 1.5,
+        overflow: "hidden",
+        display: descOpen ? "block" : "-webkit-box",
+        WebkitLineClamp: descOpen ? "none" : 2,
+        WebkitBoxOrient: "vertical"
+      }
+    }, t.description, " ", React.createElement("span", {
+      style: { fontSize: 11, color: C.accent, fontWeight: 700, whiteSpace: "nowrap" }
+    }, descOpen ? "▲ Less" : "▼ Read more"))), t.warnings && t.warnings !== "None" && React.createElement("span", {
     title: t.warnings,
     onClick: function(ev) { var el = ev.currentTarget.querySelector("[data-warn]"); if (el) el.style.display = el.style.display === "none" ? "inline" : "none"; },
     style: {
@@ -2981,52 +3006,84 @@ function Detail({
     React.createElement("span", { style: { fontSize: 12, color: "#60a5fa", fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 } }, "\u{1F39F} Booked" + (bkList.length > 1 ? " (" + bkList.length + ")" : ""))),
   bkList.map(function(bk, bi) {
     var dateStr = (function() { try { var dt = new Date(bk.date + "T12:00:00"); return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()] + " " + dt.getDate() + "/" + (dt.getMonth()+1); } catch(e) { return bk.date || "No date"; } })();
-    return React.createElement("div", { key: bi, style: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: bi > 0 ? "1px solid rgba(96,165,250,0.1)" : "none" } },
-      React.createElement("div", {style: {flex: 1}},
+    return React.createElement("div", { key: bi, style: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: bi > 0 ? "1px solid rgba(96,165,250,0.1)" : "none", flexWrap: "wrap" } },
+      React.createElement("div", {style: {flex: "1 1 auto", minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}},
         React.createElement("span", { style: { fontSize: 14, fontWeight: 800, color: C.txt } }, dateStr),
         React.createElement("span", { style: { fontSize: 13, color: C.txt2, marginLeft: 8 } }, (bk.start || "") + (bk.end ? " – " + bk.end : ""))),
-      React.createElement("button", {
-        onClick: function() { removeB(t.code, bi); w && w(t); },
-        "aria-label": "Change date/time for booking on " + (bk.date || "this date"),
-        title: "Change date/time",
-        style: { padding: "4px 8px", borderRadius: 8, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60a5fa", fontWeight: 700, fontSize: 12, cursor: "pointer" }
-      }, "✎"),
-      React.createElement("button", {
-        onClick: function() { if (window.confirm("Remove this booking" + (bk.date ? " on " + bk.date : "") + "?")) { removeB(t.code, bi); if (bkList.length <= 1) b(); } },
-        "aria-label": "Remove booking on " + (bk.date || "this date"),
-        style: { padding: "4px 8px", borderRadius: 8, border: "none", background: "rgba(239,68,68,0.18)", color: "#f87171", fontWeight: 700, fontSize: 12, cursor: "pointer" }
-      }, "✕"));
+      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, flexShrink: 0 } },
+        React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }, title: "Price paid" },
+          React.createElement("span", { style: { fontSize: 11, color: C.txt3 } }, "£"),
+          React.createElement("input", {
+            type: "number",
+            min: 0,
+            step: "0.01",
+            value: bk.price != null ? bk.price : (typeof t.priceFull === "number" ? t.priceFull : ""),
+            onChange: function(ev) { var v = ev.target.value; updateBk && updateBk(t.code, bi, { price: v === "" ? null : parseFloat(v) }); },
+            placeholder: "0",
+            "aria-label": "Price paid",
+            style: { width: 64, padding: "4px 6px", borderRadius: 6, border: "1px solid " + C.border, background: "rgba(255,255,255,0.06)", color: C.txt, fontSize: 12, outline: "none", textAlign: "right" }
+          })),
+        React.createElement("button", {
+          onClick: function() { removeB(t.code, bi); w && w(t); },
+          "aria-label": "Change date/time for booking on " + (bk.date || "this date"),
+          title: "Change date/time",
+          style: { padding: "4px 8px", borderRadius: 8, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60a5fa", fontWeight: 700, fontSize: 12, cursor: "pointer" }
+        }, "✎"),
+        React.createElement("button", {
+          onClick: function() { if (window.confirm("Remove this booking" + (bk.date ? " on " + bk.date : "") + "?")) { removeB(t.code, bi); if (bkList.length <= 1) b(); } },
+          "aria-label": "Remove booking on " + (bk.date || "this date"),
+          style: { padding: "4px 8px", borderRadius: 8, border: "none", background: "rgba(239,68,68,0.18)", color: "#f87171", fontWeight: 700, fontSize: 12, cursor: "pointer" }
+        }, "✕")));
   })),
+  React.createElement("div", {style: {flexShrink: 0, minWidth: 100, display: "flex", flexDirection: "column", gap: 6, marginTop: 10, padding: "12px 14px", borderRadius: 12, border: "1px solid " + C.border, background: "rgba(255,255,255,0.03)"}},
   React.createElement("div", {
-    style: {display: "flex", alignItems: "center", gap: 8, marginTop: 10, flexWrap: "wrap"}
-  }, React.createElement("span", {
-    style: {fontSize: 12, color: C.txt2, fontWeight: 700, flexShrink: 0}
-  }, "\u{1F465} Going with:"),
-  _companion ? React.createElement("span", {
-    style: {fontSize: 13, color: C.txt, fontWeight: 700, background: "rgba(168,85,247,0.12)", borderRadius: 20, padding: "3px 12px 3px 10px", display: "inline-flex", alignItems: "center", gap: 6}
-  }, _companion, React.createElement("button", {
-    onClick: function() { _onCompanion(t.code, ""); },
-    style: {background: "none", border: "none", color: C.txt3, cursor: "pointer", fontSize: 11, padding: 0, lineHeight: 1}
-  }, "\u2715")) : compEdit ? React.createElement("div", {
-    style: {display: "flex", gap: 6, alignItems: "center"}
-  }, React.createElement("input", {
-    type: "text",
-    value: compInput,
-    onChange: function(ev) { setCompInput(ev.target.value); },
-    onKeyDown: function(ev) { if (ev.key === "Enter" && compInput.trim()) { _onCompanion(t.code, compInput.trim()); setCompEdit(false); setCompInput(""); } if (ev.key === "Escape") { setCompEdit(false); setCompInput(""); } },
-    placeholder: "Name or group\u2026",
-    autoFocus: true,
-    style: {padding: "5px 10px", borderRadius: 8, border: "1px solid " + C.border, background: "rgba(255,255,255,0.06)", color: C.txt, fontSize: 12, width: 140, outline: "none"}
-  }), React.createElement("button", {
-    onClick: function() { if (compInput.trim()) { _onCompanion(t.code, compInput.trim()); setCompEdit(false); setCompInput(""); } },
-    style: {padding: "4px 10px", borderRadius: 8, border: "none", background: C.accent, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer"}
-  }, "Add"), React.createElement("button", {
-    onClick: function() { setCompEdit(false); setCompInput(""); },
-    style: {background: "none", border: "none", color: C.txt3, cursor: "pointer", fontSize: 12}
-  }, "Cancel")) : React.createElement("button", {
-    onClick: function() { setCompEdit(true); },
-    style: {padding: "4px 12px", borderRadius: 8, border: "1px dashed " + C.border, background: "transparent", color: C.txt3, fontSize: 12, cursor: "pointer"}
-  }, "+ Add")),
+    style: {fontSize: 11, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5}
+  }, "Going with"),
+  (function() {
+    var people = _companion ? _companion.split(",").map(function(s) { return s.trim(); }).filter(Boolean) : [];
+    function removePerson(name) {
+      var updated = people.filter(function(p) { return p !== name; }).join(", ");
+      _onCompanion(t.code, updated);
+    }
+    function addPerson(name) {
+      var updated = people.concat(name).join(", ");
+      _onCompanion(t.code, updated);
+    }
+    return React.createElement("div", {style: {marginTop: 4, display: "flex", flexDirection: "column", gap: 4}},
+      people.length > 0 && React.createElement("div", {style: {display: "flex", gap: 4, flexWrap: "wrap"}},
+        people.map(function(person, idx) {
+          return React.createElement("span", {
+            key: idx,
+            style: {display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(168,85,247,0.12)", borderRadius: 14, padding: "3px 8px 3px 6px", fontSize: 12, color: C.txt, fontWeight: 600}
+          }, React.createElement("svg", {width: 14, height: 14, viewBox: "0 0 24 24", fill: "currentColor", style: {opacity: 0.6, flexShrink: 0}},
+            React.createElement("path", {d: "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"})),
+          person,
+          React.createElement("button", {
+            onClick: function() { removePerson(person); },
+            style: {background: "none", border: "none", color: C.txt3, cursor: "pointer", fontSize: 10, padding: 0, marginLeft: 2, lineHeight: 1}
+          }, "\u2715"));
+        })),
+      compEdit ? React.createElement("div", {
+        style: {display: "flex", gap: 4, alignItems: "center"}
+      }, React.createElement("input", {
+        type: "text",
+        value: compInput,
+        onChange: function(ev) { setCompInput(ev.target.value); },
+        onKeyDown: function(ev) {
+          if (ev.key === "Enter" && compInput.trim()) { addPerson(compInput.trim()); setCompEdit(false); setCompInput(""); }
+          if (ev.key === "Escape") { setCompEdit(false); setCompInput(""); }
+        },
+        placeholder: "Name\u2026",
+        autoFocus: true,
+        style: {padding: "4px 8px", borderRadius: 8, border: "1px solid " + C.border, background: "rgba(255,255,255,0.06)", color: C.txt, fontSize: 12, width: 80, outline: "none"}
+      }), React.createElement("button", {
+        onClick: function() { if (compInput.trim()) { addPerson(compInput.trim()); setCompEdit(false); setCompInput(""); } },
+        style: {padding: "3px 8px", borderRadius: 8, border: "none", background: C.accent, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer"}
+      }, "\u2713")) : React.createElement("button", {
+        onClick: function() { setCompEdit(true); },
+        style: {padding: "3px 10px", borderRadius: 8, border: "1px dashed " + C.border, background: "transparent", color: C.txt3, fontSize: 11, cursor: "pointer"}
+      }, "+ Add"));
+  })()),
   n && !o && h && React.createElement("div", {
     style: {display: "flex", alignItems: "center", gap: 8, marginTop: 8}
   }, React.createElement("span", {
@@ -3240,6 +3297,7 @@ function icsStamp_(t, n) {
 }
 
 function perfPrice_(s, rec) {
+  if (rec && rec.price != null && rec.price !== "") return Number(rec.price) || 0;
   if (!s || !s.performances) return typeof s.priceFullMax == "number" ? s.priceFullMax : typeof s.priceFull == "number" ? s.priceFull : 0;
   var match = s.performances.filter(function(pf) {
     return pf.date === rec.date && (!rec.start || pf.start === rec.start);
@@ -3951,7 +4009,9 @@ function FilterControls({
   }, "Suitable ", k))),
   function() {
     var compVals = Object.values(companions).filter(function(v) { return v && v.trim(); });
-    var uniqueComps = Array.from(new Set(compVals)).sort();
+    var allNames = [];
+    compVals.forEach(function(v) { v.split(",").forEach(function(n) { var nm = n.trim(); if (nm) allNames.push(nm); }); });
+    var uniqueComps = Array.from(new Set(allNames)).sort();
     if (uniqueComps.length === 0) return null;
     return React.createElement("select", {
       "aria-label": "Going with",
@@ -4694,6 +4754,13 @@ function App() {
       }
       return l
     }),
+    updateBk_ = (code, idx, updates) => h(r => {
+      const l = { ...r };
+      if (Array.isArray(l[code]) && l[code][idx]) {
+        l[code] = l[code].map(function(rec, i) { return i === idx ? Object.assign({}, rec, updates) : rec; });
+      }
+      return l;
+    }),
     Be = e => { I(e) },
     Cn = (e, r) => g(l => {
       const i = {
@@ -4967,7 +5034,7 @@ function App() {
         const i = Pe.toLowerCase();
         if (!(e.title + " " + e.artist + " " + (e.space || "") + " " + e.venue + " " + e.genre + " " + e.tags.join(" ") + " " + e.teaser).toLowerCase().includes(i)) return !1
       }
-      if (compFilter && companions[e.code] !== compFilter) return !1;
+      if (compFilter && !(companions[e.code] && companions[e.code].split(",").some(function(n) { return n.trim() === compFilter; }))) return !1;
       return !0
     },
     Xe = useMemo(function() {
@@ -5366,7 +5433,22 @@ function App() {
       color: C.txt
     }
   }, "\u2728 A new version is available", React.createElement("button", {
-    onClick: function() { window.location.reload(); },
+    onClick: function() {
+      if (navigator.serviceWorker) {
+        navigator.serviceWorker.getRegistration().then(function(reg) {
+          if (reg && reg.waiting) {
+            reg.waiting.postMessage({ type: "SKIP_WAITING" });
+            navigator.serviceWorker.addEventListener("controllerchange", function() {
+              window.location.reload();
+            });
+          } else {
+            window.location.reload();
+          }
+        }).catch(function() { window.location.reload(); });
+      } else {
+        window.location.reload();
+      }
+    },
     style: {
       padding: "5px 12px",
       borderRadius: 8,
@@ -7145,7 +7227,7 @@ function App() {
         flexDirection: V ? "column" : "row"
       }
     }, React.createElement("div", {
-      style: { display: "flex", gap: 8, flexWrap: "wrap", justifyContent: V ? "center" : "flex-start" }
+      style: { display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }
     }, React.createElement("button", {
       onClick: function() {
         downloadAllICS_(e, p, y)
@@ -7286,8 +7368,11 @@ function App() {
       }
     }, React.createElement("div", {style: {fontSize: 14, fontWeight: 800, color: "#34d399", marginBottom: 6}}, "A friend shared " + sharedBookings.length + " show" + (sharedBookings.length === 1 ? "" : "s") + " with you!"),
     React.createElement("div", {style: {fontSize: 12, color: C.txt2, marginBottom: 10}}, sharedBookings.map(function(item, idx) {
-      var sh = e[item.code];
-      return React.createElement("div", {key: idx, style: {padding: "4px 0"}}, (sh ? sh.title : item.code) + (item.date ? " — " + item.date + (item.start ? " at " + item.start : "") : ""));
+      var code = item.code || item.c;
+      var date = item.date || item.d;
+      var start = item.start || item.s;
+      var sh = e[code];
+      return React.createElement("div", {key: idx, style: {padding: "4px 0"}}, (idx + 1) + ". " + (sh ? sh.title : code) + (date ? " — " + date + (start ? " at " + start : "") : ""));
     })),
     React.createElement("div", {style: {display: "flex", gap: 8}},
       React.createElement("button", {onClick: acceptSharedBookings, style: {padding: "8px 18px", borderRadius: 10, border: "none", background: "#34d399", color: "#000", fontSize: 13, fontWeight: 800, cursor: "pointer"}}, "Add to my bookings"),
@@ -7518,7 +7603,7 @@ function App() {
                 color: C.txt2,
                 wordBreak: "break-word"
               }
-            }, "\u{1F550} ", m.rec.start || m.s.startStr || "?", m.rec.end || m.s.endStr ? "\u2013" + (m.rec.end || m.s.endStr) : "", " \xB7 ", venueLabel_(m.s), m.s.venueCode ? " (#" + m.s.venueCode + ")" : "", priceLabel(perfPrice_(m.s, m.rec)) ? " \xB7 " + priceLabel(perfPrice_(m.s, m.rec)) : ""), he && React.createElement("a", {
+            }, "\u{1F550} ", m.rec.start || m.s.startStr || "?", m.rec.end || m.s.endStr ? "\u2013" + (m.rec.end || m.s.endStr) : "", priceLabel(perfPrice_(m.s, m.rec)) ? " \xB7 " + priceLabel(perfPrice_(m.s, m.rec)) : ""), React.createElement("a", {
               href: mapsUrl(m.s),
               target: "_blank",
               rel: "noopener noreferrer",
@@ -7534,7 +7619,7 @@ function App() {
                 textDecoration: "none",
                 wordBreak: "break-word"
               }
-            }, "\u{1F4CD} ", he, " \u2197")), function() {
+            }, "\u{1F4CD} ", React.createElement("strong", null, venueLabel_(m.s), m.s.venueCode ? " (#" + m.s.venueCode + ")" : ""), he ? " \xB7 " + he + " \u2197" : "")), function() {
               var btnS = {width: 32, height: 32, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 13, cursor: "pointer", padding: 0};
               var allBtns = [
                 React.createElement("button", {
@@ -7558,6 +7643,13 @@ function App() {
                   title: d.has(m.code) ? "On your wishlist" : "Add to wishlist",
                   style: Object.assign({}, btnS, {border: "1px solid " + (d.has(m.code) ? "#34d399" : C.border), background: d.has(m.code) ? "rgba(52,211,153,0.16)" : "transparent", color: d.has(m.code) ? "#34d399" : C.txt2})
                 }, d.has(m.code) ? "\u2665" : "\u2661"),
+                React.createElement("button", {
+                  key: "review",
+                  onClick: function() { de(m.s); },
+                  "aria-label": (se[m.code] ? "Edit" : "Add") + " review or notes",
+                  title: se[m.code] ? "Edit review / notes" : "Add review / notes",
+                  style: Object.assign({}, btnS, {border: "1px solid " + (se[m.code] ? "#fbbf24" : C.border), background: se[m.code] ? "rgba(251,191,36,0.15)" : "transparent", color: se[m.code] ? "#fbbf24" : C.txt2, fontSize: 14})
+                }, "\u270f\ufe0f"),
                 React.createElement("select", {
                   key: "prop",
                   value: "",
@@ -8950,7 +9042,8 @@ function App() {
     rating: oe ? (ratings[oe.code] || 0) : 0,
     onRate: function(code, val) { setRatings(function(prev) { var next = Object.assign({}, prev); if (val) next[code] = val; else delete next[code]; return next; }); },
     companion: oe ? (companions[oe.code] || "") : "",
-    onCompanion: function(code, val) { setCompanions(function(prev) { var next = Object.assign({}, prev); if (val) next[code] = val; else delete next[code]; return next; }); }
+    onCompanion: function(code, val) { setCompanions(function(prev) { var next = Object.assign({}, prev); if (val) next[code] = val; else delete next[code]; return next; }); },
+    onUpdateBooking: updateBk_
   }), addShowOpen && React.createElement("div", {
     onClick: function(ev) { if (ev.target === ev.currentTarget) { setAddShowOpen(false); } },
     style: {
