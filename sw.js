@@ -43,15 +43,20 @@ self.addEventListener("fetch", function (e) {
         // Fetch fresh copy in background regardless
         var fetched = fetch(e.request).then(function (response) {
           if (response && response.status === 200) {
-            cache.put(e.request, response.clone());
-            // If we had a cached version and the new one differs, notify clients
+            var freshClone = response.clone();
+            // Only notify if cached content actually differs from the new version
             if (cached) {
-              self.clients.matchAll().then(function (clients) {
-                clients.forEach(function (client) {
-                  client.postMessage({ type: "update-available" });
-                });
+              Promise.all([cached.clone().text(), freshClone.clone().text()]).then(function (texts) {
+                if (texts[0] !== texts[1]) {
+                  self.clients.matchAll().then(function (clients) {
+                    clients.forEach(function (client) {
+                      client.postMessage({ type: "update-available" });
+                    });
+                  });
+                }
               });
             }
+            cache.put(e.request, freshClone);
           }
           return response;
         }).catch(function () {

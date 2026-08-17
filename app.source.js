@@ -3006,33 +3006,50 @@ function Detail({
     React.createElement("span", { style: { fontSize: 12, color: "#60a5fa", fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 } }, "\u{1F39F} Booked" + (bkList.length > 1 ? " (" + bkList.length + ")" : ""))),
   bkList.map(function(bk, bi) {
     var dateStr = (function() { try { var dt = new Date(bk.date + "T12:00:00"); return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dt.getDay()] + " " + dt.getDate() + "/" + (dt.getMonth()+1); } catch(e) { return bk.date || "No date"; } })();
-    return React.createElement("div", { key: bi, style: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: bi > 0 ? "1px solid rgba(96,165,250,0.1)" : "none", flexWrap: "wrap" } },
-      React.createElement("div", {style: {flex: "1 1 auto", minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}},
-        React.createElement("span", { style: { fontSize: 14, fontWeight: 800, color: C.txt } }, dateStr),
-        React.createElement("span", { style: { fontSize: 13, color: C.txt2, marginLeft: 8 } }, (bk.start || "") + (bk.end ? " – " + bk.end : ""))),
-      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, flexShrink: 0 } },
-        React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }, title: "Price paid" },
-          React.createElement("span", { style: { fontSize: 11, color: C.txt3 } }, "£"),
-          React.createElement("input", {
-            type: "number",
-            min: 0,
-            step: "0.01",
-            value: bk.price != null ? bk.price : (typeof t.priceFull === "number" ? t.priceFull : ""),
-            onChange: function(ev) { var v = ev.target.value; updateBk && updateBk(t.code, bi, { price: v === "" ? null : parseFloat(v) }); },
-            placeholder: "0",
-            "aria-label": "Price paid",
-            style: { width: 64, padding: "4px 6px", borderRadius: 6, border: "1px solid " + C.border, background: "rgba(255,255,255,0.06)", color: C.txt, fontSize: 12, outline: "none", textAlign: "right" }
-          })),
-        React.createElement("button", {
-          onClick: function() { removeB(t.code, bi); w && w(t); },
-          "aria-label": "Change date/time for booking on " + (bk.date || "this date"),
-          title: "Change date/time",
-          style: { padding: "4px 8px", borderRadius: 8, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60a5fa", fontWeight: 700, fontSize: 12, cursor: "pointer" }
-        }, "✎"),
-        React.createElement("button", {
-          onClick: function() { if (window.confirm("Remove this booking" + (bk.date ? " on " + bk.date : "") + "?")) { removeB(t.code, bi); if (bkList.length <= 1) b(); } },
-          "aria-label": "Remove booking on " + (bk.date || "this date"),
-          style: { padding: "4px 8px", borderRadius: 8, border: "none", background: "rgba(239,68,68,0.18)", color: "#f87171", fontWeight: 700, fontSize: 12, cursor: "pointer" }
+    return React.createElement("div", { key: bi, style: { padding: "6px 0", borderTop: bi > 0 ? "1px solid rgba(96,165,250,0.1)" : "none" } },
+      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } },
+        React.createElement("div", {style: {flex: "1 1 auto", minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}},
+          React.createElement("span", { style: { fontSize: 14, fontWeight: 800, color: C.txt } }, dateStr),
+          React.createElement("span", { style: { fontSize: 13, color: C.txt2, marginLeft: 8 } }, (bk.start || "") + (bk.end ? " – " + bk.end : ""))),
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, flexShrink: 0 } },
+          React.createElement("label", { style: { display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }, title: "Price paid" },
+            React.createElement("span", { style: { fontSize: 11, color: C.txt3 } }, "£"),
+            React.createElement("input", {
+              type: "number",
+              min: 0,
+              step: "0.01",
+              value: bk.price != null ? bk.price : (typeof t.priceFull === "number" ? t.priceFull : ""),
+              onChange: function(ev) { var v = ev.target.value; updateBk && updateBk(t.code, bi, { price: v === "" ? null : parseFloat(v) }); },
+              placeholder: "0",
+              "aria-label": "Price paid",
+              style: { width: 64, padding: "4px 6px", borderRadius: 6, border: "1px solid " + C.border, background: "rgba(255,255,255,0.06)", color: C.txt, fontSize: 12, outline: "none", textAlign: "right" }
+            })),
+          React.createElement("button", {
+            onClick: function() { removeB(t.code, bi); w && w(t); },
+            "aria-label": "Change date/time for booking on " + (bk.date || "this date"),
+            title: "Change date/time",
+            style: { padding: "4px 8px", borderRadius: 8, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60a5fa", fontWeight: 700, fontSize: 12, cursor: "pointer" }
+          }, "✎"),
+          React.createElement("button", {
+            onClick: function() { if (window.confirm("Remove this booking" + (bk.date ? " on " + bk.date : "") + "?")) { removeB(t.code, bi); if (bkList.length <= 1) b(); } },
+            "aria-label": "Remove booking on " + (bk.date || "this date"),
+            style: { padding: "4px 8px", borderRadius: 8, border: "none", background: "rgba(239,68,68,0.18)", color: "#f87171", fontWeight: 700, fontSize: 12, cursor: "pointer" }
+          }, "✕"))),
+      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, marginTop: 4 } },
+        React.createElement("span", { style: { fontSize: 11, color: C.txt3 } }, "\u{1F4CD}"),
+        React.createElement("input", {
+          type: "text",
+          value: bk.venue != null ? bk.venue : "",
+          onChange: function(ev) { updateBk && updateBk(t.code, bi, { venue: ev.target.value || null }); },
+          placeholder: venueLabel_(t) + (t.venueCode ? " (#" + t.venueCode + ")" : ""),
+          "aria-label": "Venue override for this booking",
+          title: "Override venue for this date (leave blank to use default)",
+          style: { flex: 1, padding: "4px 6px", borderRadius: 6, border: "1px solid " + (bk.venue ? "rgba(251,191,36,0.4)" : C.border), background: bk.venue ? "rgba(251,191,36,0.08)" : "rgba(255,255,255,0.06)", color: C.txt, fontSize: 11, outline: "none" }
+        }),
+        bk.venue && React.createElement("button", {
+          onClick: function() { updateBk && updateBk(t.code, bi, { venue: null }); },
+          title: "Reset to default venue",
+          style: { padding: "2px 6px", borderRadius: 6, border: "none", background: "rgba(239,68,68,0.18)", color: "#f87171", fontSize: 10, cursor: "pointer" }
         }, "✕")));
   })),
   React.createElement("div", {style: {flexShrink: 0, minWidth: 100, display: "flex", flexDirection: "column", gap: 6, marginTop: 10, padding: "12px 14px", borderRadius: 12, border: "1px solid " + C.border, background: "rgba(255,255,255,0.03)"}},
@@ -4535,7 +4552,15 @@ function App() {
     window.addEventListener("online", goOn);
     if (navigator.serviceWorker) {
       navigator.serviceWorker.addEventListener("message", function(e) {
-        if (e.data && e.data.type === "update-available") setUpdateAvail(true);
+        if (e.data && e.data.type === "update-available") {
+          try {
+            if (sessionStorage.getItem("fringe-just-refreshed")) {
+              sessionStorage.removeItem("fringe-just-refreshed");
+              return;
+            }
+          } catch(err) {}
+          setUpdateAvail(true);
+        }
       });
     }
     return function() { window.removeEventListener("offline", goOff); window.removeEventListener("online", goOn); };
@@ -4552,7 +4577,7 @@ function App() {
   }, []);
   var acceptSharedBookings = function() {
     if (!sharedBookings || !sharedBookings.length) return;
-    te(function(prev) {
+    h(function(prev) {
       var next = {};
       Object.keys(prev).forEach(function(k) { next[k] = prev[k].slice(); });
       sharedBookings.forEach(function(item) {
@@ -5434,20 +5459,9 @@ function App() {
     }
   }, "\u2728 A new version is available", React.createElement("button", {
     onClick: function() {
-      if (navigator.serviceWorker) {
-        navigator.serviceWorker.getRegistration().then(function(reg) {
-          if (reg && reg.waiting) {
-            reg.waiting.postMessage({ type: "SKIP_WAITING" });
-            navigator.serviceWorker.addEventListener("controllerchange", function() {
-              window.location.reload();
-            });
-          } else {
-            window.location.reload();
-          }
-        }).catch(function() { window.location.reload(); });
-      } else {
-        window.location.reload();
-      }
+      setUpdateAvail(false);
+      try { sessionStorage.setItem("fringe-just-refreshed", "1"); } catch(err) {}
+      window.location.reload();
     },
     style: {
       padding: "5px 12px",
@@ -7159,6 +7173,18 @@ function App() {
       var c = u.rec.date || "No date";
       (l[c] = l[c] || []).push(u)
     });
+    var multiVenueShows = {};
+    (n || []).forEach(function(u) {
+      var t = (u.title || "").toLowerCase().trim();
+      if (!t) return;
+      if (!multiVenueShows[t]) multiVenueShows[t] = {};
+      multiVenueShows[t][u.venue || ""] = venueLabel_(u);
+    });
+    var multiVenueWarnings = {};
+    Object.keys(multiVenueShows).forEach(function(t) {
+      var venues = Object.keys(multiVenueShows[t]);
+      if (venues.length > 1) multiVenueWarnings[t] = Object.values(multiVenueShows[t]);
+    });
     var i = Object.keys(l).sort();
     var nowDate = new Date();
     var nowStr = nowDate.getFullYear() + "-" + String(nowDate.getMonth()+1).padStart(2,"0") + "-" + String(nowDate.getDate()).padStart(2,"0");
@@ -7619,7 +7645,12 @@ function App() {
                 textDecoration: "none",
                 wordBreak: "break-word"
               }
-            }, "\u{1F4CD} ", React.createElement("strong", null, venueLabel_(m.s), m.s.venueCode ? " (#" + m.s.venueCode + ")" : ""), he ? " \xB7 " + he + " \u2197" : "")), function() {
+            }, "\u{1F4CD} ", React.createElement("strong", null, m.rec.venue || venueLabel_(m.s), !m.rec.venue && m.s.venueCode ? " (#" + m.s.venueCode + ")" : ""), m.rec.venue ? "" : (he ? " \xB7 " + he + " \u2197" : ""), m.rec.venue ? React.createElement("span", {style: {color: "#fbbf24", fontSize: 10, marginLeft: 4}}, "(edited)") : ""),
+            !m.rec.venue && multiVenueWarnings[(m.s.title || "").toLowerCase().trim()] && React.createElement("div", {
+              style: { fontSize: 10, color: "#fbbf24", marginTop: 2, display: "flex", alignItems: "center", gap: 4, cursor: "pointer" },
+              title: "This show performs at multiple venues: " + multiVenueWarnings[(m.s.title || "").toLowerCase().trim()].join(", ") + ". Tap the show to set the correct venue for this booking.",
+              onClick: function(z) { z.stopPropagation(); de(m.s); }
+            }, "\u26a0\ufe0f This show has ", multiVenueWarnings[(m.s.title || "").toLowerCase().trim()].length, " venues \u2014 check yours is correct")), function() {
               var btnS = {width: 32, height: 32, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 13, cursor: "pointer", padding: 0};
               var allBtns = [
                 React.createElement("button", {
