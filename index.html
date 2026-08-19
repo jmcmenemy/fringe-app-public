@@ -25,7 +25,7 @@ html[data-theme="nocolor"]{--bg:#0e0e12;--card:#1b1b22;--border:#6a6a72;--txt:#e
 body{background:var(--bg);color:var(--txt);}
 select,option{color:var(--txt);}
 option{background:var(--card);color:var(--txt);}
-html[data-theme="nocolor"] #root{filter:grayscale(1);}
+html[data-theme="nocolor"]{filter:grayscale(1);}
 /* end theme */
 
 .dr{position:absolute;left:0;right:0;width:100%;top:0;bottom:0;margin:auto;height:22px;background:transparent;pointer-events:none;-webkit-appearance:none;appearance:none;}
@@ -45,6 +45,7 @@ input[type="date"]{cursor:pointer}html[data-theme="dark"] input[type="date"]::-w
 </head>
 <body>
 <div id="root"></div>
+<div id="nav-portal"></div>
 <script>/**
  * @license React
  * react.production.min.js

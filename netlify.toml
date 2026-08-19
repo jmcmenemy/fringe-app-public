@@ -1,6 +1,7 @@
-[build]
-  publish = "."
-  functions = "netlify/functions"
-
 [functions]
+  directory = "netlify/functions"
   node_bundler = "esbuild"
+
+# Daily cache refresh at 4am UTC
+[functions."fringe-cache"]
+  schedule = "0 4 * * *"
