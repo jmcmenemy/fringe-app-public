@@ -17,6 +17,7 @@
   input[type=range]{ accent-color:var(--accent); }
   ::-webkit-scrollbar{ width:10px;height:10px; } ::-webkit-scrollbar-thumb{ background:#2b2745;border-radius:6px; }
   .spin{ width:34px;height:34px;border:3px solid #2b2745;border-top-color:var(--accent);border-radius:50%;animation:s 0.8s linear infinite;margin:60px auto; } @keyframes s{ to{ transform:rotate(360deg);} }
+  @keyframes fadeInUp{ from{ opacity:0;transform:translateX(-50%) translateY(12px); } to{ opacity:1;transform:translateX(-50%) translateY(0); } }
 
 /* theme */
 :root{--bg:#0d0b1a;--card:#17142b;--border:#6a6597;--txt:#f1f0f7;--txt2:#b7b3cf;--txt3:#a3a0bd;--accent:#a855f7;--pink:#ec4899;}
