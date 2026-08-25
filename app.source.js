@@ -2896,84 +2896,15 @@ function Detail({
   }, t.genre), t.tags.map((S, I) => React.createElement(Tag, {
     key: I,
     color: tagColor(S)
-  }, S))), React.createElement("div", {
-    style: { marginTop: 6, background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)", borderRadius: 12, padding: "12px 14px" }
-  }, React.createElement("div", {
-    onClick: function() { setDetailsOpen(!detailsOpen); },
-    style: { display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", userSelect: "none", marginBottom: detailsOpen ? 8 : 0 }
-  }, React.createElement("span", { style: { fontSize: 12, color: C.accent, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 } }, "\u{1F4CB} Show Details"),
-    React.createElement("span", { style: { fontSize: 14, color: C.accent, transition: "transform 0.2s", transform: detailsOpen ? "rotate(180deg)" : "rotate(0deg)" } }, "▲")),
-  detailsOpen && React.createElement(React.Fragment, null, React.createElement("div", {
-    style: {
-      display: "grid",
-      gridTemplateColumns: (typeof window !== "undefined" && window.innerWidth > 640) ? "1fr 1fr 1fr 1fr" : "1fr 1fr",
-      gap: "8px 12px",
-      padding: "12px 14px",
-      borderRadius: 12,
-      background: "rgba(255,255,255,0.03)",
-      border: "1px solid " + C.border
-    }
-  }, React.createElement(Info, {
-    label: "Dates",
-    value: dateRange(t.first, t.last)
-  }), React.createElement(Info, {
-    label: "Time",
-    value: t.startStr === "Various times" ? "Various" : t.startStr ? t.startStr + (t.endStr ? "\u2013" + t.endStr : "") : "\u2014"
-  }), React.createElement(Info, {
-    label: "Full price",
-    value: priceLabel(t.priceFull) ? (t.priceFullMax != null && t.priceFullMax !== t.priceFull ? priceLabel(t.priceFull) + " \u2013 " + priceLabel(t.priceFullMax) : priceLabel(t.priceFull)) : "\u2014"
-  }), React.createElement(Info, {
-    label: "Concession",
-    value: priceLabel(t.priceConc) ? (t.priceConcMax != null && t.priceConcMax !== t.priceConc ? priceLabel(t.priceConc) + " \u2013 " + priceLabel(t.priceConcMax) : priceLabel(t.priceConc)) : "\u2014"
-  })), React.createElement("div", {style: {display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 12px", margin: "8px 0 0", padding: "12px 14px", borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid " + C.border}},
-  React.createElement(Info, {
-    label: "Duration",
-    value: t.duration ? (function(){var dm=Number(t.duration);if(!dm||isNaN(dm))return t.duration+" min";var h=Math.floor(dm/60),m=dm%60;return dm+" mins"+(dm>=60?" ("+h+"h"+(m?m+"m":"")+")" :"");})() : "\u2014"
-  }), React.createElement(Info, {
-    label: "Age",
-    value: t.age || "\u2014"
-  }), React.createElement(Info, {
-    label: "Performances",
-    value: t.perfs || "\u2014"
-  })), t.description && React.createElement("div", {
-      style: { marginTop: 8, padding: "12px 14px", borderRadius: 12, border: "1px solid " + C.border, background: "rgba(255,255,255,0.03)", cursor: "pointer" },
-      onClick: function() { setDescOpen(!descOpen); }
-    }, React.createElement("div", {
-      style: {
-        fontSize: 13,
-        color: C.txt2,
-        lineHeight: 1.5,
-        overflow: "hidden",
-        display: descOpen ? "block" : "-webkit-box",
-        WebkitLineClamp: descOpen ? "none" : 2,
-        WebkitBoxOrient: "vertical"
-      }
-    }, t.description, " ", React.createElement("span", {
-      style: { fontSize: 11, color: C.accent, fontWeight: 700, whiteSpace: "nowrap" }
-    }, descOpen ? "▲ Less" : "▼ Read more"))), t.warnings && t.warnings !== "None" && React.createElement("span", {
-    title: t.warnings,
-    onClick: function(ev) { var el = ev.currentTarget.querySelector("[data-warn]"); if (el) el.style.display = el.style.display === "none" ? "inline" : "none"; },
-    style: {
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 4,
-      cursor: "pointer",
-      fontSize: 13,
-      color: "#fca5a5",
-      marginBottom: 4,
-      marginTop: 2,
-      padding: "4px 8px",
-      borderRadius: 8,
-      background: "rgba(239,68,68,0.08)"
-    }
-  }, "\u26A0\uFE0F", React.createElement("span", {"data-warn": true, style: {display: "none", fontSize: 12, color: "#fca5a5"}}, " ", t.warnings)))),
+  }, S))),
   React.createElement("div", {
     style: {
       display: "flex",
       gap: 6,
       alignItems: "center",
       flexWrap: "wrap",
-      marginTop: 12
+      marginTop: 8,
+      marginBottom: 8
     }
   }, React.createElement("button", {
     onClick: d,
@@ -3076,7 +3007,77 @@ function Detail({
       })
     ),
     _rating > 0 && !ratingOpen && React.createElement("span", {style: {fontSize: 11, color: "#FBBF24", fontWeight: 700, marginLeft: 4}}, _rating + "/5")
-  )),
+  )), React.createElement("div", {
+    style: { marginTop: 6, background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)", borderRadius: 12, padding: "12px 14px" }
+  }, React.createElement("div", {
+    onClick: function() { setDetailsOpen(!detailsOpen); },
+    style: { display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", userSelect: "none", marginBottom: detailsOpen ? 8 : 0 }
+  }, React.createElement("span", { style: { fontSize: 12, color: C.accent, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 } }, "\u{1F4CB} Show Details"),
+    React.createElement("span", { style: { fontSize: 14, color: C.accent, transition: "transform 0.2s", transform: detailsOpen ? "rotate(180deg)" : "rotate(0deg)" } }, "▲")),
+  detailsOpen && React.createElement(React.Fragment, null, React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: (typeof window !== "undefined" && window.innerWidth > 640) ? "1fr 1fr 1fr 1fr" : "1fr 1fr",
+      gap: "8px 12px",
+      padding: "12px 14px",
+      borderRadius: 12,
+      background: "rgba(255,255,255,0.03)",
+      border: "1px solid " + C.border
+    }
+  }, React.createElement(Info, {
+    label: "Dates",
+    value: dateRange(t.first, t.last)
+  }), React.createElement(Info, {
+    label: "Time",
+    value: t.startStr === "Various times" ? "Various" : t.startStr ? t.startStr + (t.endStr ? "\u2013" + t.endStr : "") : "\u2014"
+  }), React.createElement(Info, {
+    label: "Full price",
+    value: priceLabel(t.priceFull) ? (t.priceFullMax != null && t.priceFullMax !== t.priceFull ? priceLabel(t.priceFull) + " \u2013 " + priceLabel(t.priceFullMax) : priceLabel(t.priceFull)) : "\u2014"
+  }), React.createElement(Info, {
+    label: "Concession",
+    value: priceLabel(t.priceConc) ? (t.priceConcMax != null && t.priceConcMax !== t.priceConc ? priceLabel(t.priceConc) + " \u2013 " + priceLabel(t.priceConcMax) : priceLabel(t.priceConc)) : "\u2014"
+  })), React.createElement("div", {style: {display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 12px", margin: "8px 0 0", padding: "12px 14px", borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid " + C.border}},
+  React.createElement(Info, {
+    label: "Duration",
+    value: t.duration ? (function(){var dm=Number(t.duration);if(!dm||isNaN(dm))return t.duration+" min";var h=Math.floor(dm/60),m=dm%60;return dm+" mins"+(dm>=60?" ("+h+"h"+(m?m+"m":"")+")" :"");})() : "\u2014"
+  }), React.createElement(Info, {
+    label: "Age",
+    value: t.age || "\u2014"
+  }), React.createElement(Info, {
+    label: "Performances",
+    value: t.perfs || "\u2014"
+  })), t.description && React.createElement("div", {
+      style: { marginTop: 8, padding: "12px 14px", borderRadius: 12, border: "1px solid " + C.border, background: "rgba(255,255,255,0.03)", cursor: "pointer" },
+      onClick: function() { setDescOpen(!descOpen); }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 13,
+        color: C.txt2,
+        lineHeight: 1.5,
+        overflow: "hidden",
+        display: descOpen ? "block" : "-webkit-box",
+        WebkitLineClamp: descOpen ? "none" : 2,
+        WebkitBoxOrient: "vertical"
+      }
+    }, t.description, " ", React.createElement("span", {
+      style: { fontSize: 11, color: C.accent, fontWeight: 700, whiteSpace: "nowrap" }
+    }, descOpen ? "▲ Less" : "▼ Read more"))), t.warnings && t.warnings !== "None" && React.createElement("span", {
+    title: t.warnings,
+    onClick: function(ev) { var el = ev.currentTarget.querySelector("[data-warn]"); if (el) el.style.display = el.style.display === "none" ? "inline" : "none"; },
+    style: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 4,
+      cursor: "pointer",
+      fontSize: 13,
+      color: "#fca5a5",
+      marginBottom: 4,
+      marginTop: 2,
+      padding: "4px 8px",
+      borderRadius: 8,
+      background: "rgba(239,68,68,0.08)"
+    }
+  }, "\u26A0\uFE0F", React.createElement("span", {"data-warn": true, style: {display: "none", fontSize: 12, color: "#fca5a5"}}, " ", t.warnings)))),
   !o && w && React.createElement("button", {
     onClick: function() { w(t); },
     style: { marginTop: 12, width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.12)", color: "#60a5fa", fontSize: 14, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }
@@ -3186,7 +3187,8 @@ function Detail({
               style: { flex: 1, maxWidth: 120, padding: "2px 6px", borderRadius: 6, border: "1px solid " + C.border, background: "rgba(255,255,255,0.06)", color: C.txt, fontSize: 10, outline: "none" }
             }),
             React.createElement("datalist", { id: dlId2 },
-              (_allCompanions || []).map(function(n) { return React.createElement("option", { key: n, value: n }); })),
+              React.createElement("option", { key: "_myself", value: "Myself" }),
+              (_allCompanions || []).filter(function(n) { return n !== "Myself"; }).map(function(n) { return React.createElement("option", { key: n, value: n }); })),
             bk.booker && React.createElement("button", {
               onClick: function() { updateBk && updateBk(t.code, bi, { booker: null }); },
               style: { background: "none", border: "none", color: C.txt3, cursor: "pointer", fontSize: 8, padding: 0, lineHeight: 1 }
@@ -3212,7 +3214,7 @@ function Detail({
       React.createElement("input", {
         type: "number",
         min: 0,
-        value: _ltf.tickets != null ? _ltf.tickets : "",
+        value: _ltf.tickets ? _ltf.tickets : "",
         onChange: function(ev) { var v = ev.target.value; _onLtf(t.code, { checked: true, tickets: v === "" ? 0 : Math.max(0, parseInt(v, 10) || 0) }); },
         style: {width: 56, padding: "4px 6px", borderRadius: 6, border: "1px solid " + C.border, background: "rgba(255,255,255,0.06)", color: C.txt, fontSize: 13, outline: "none", textAlign: "center"}
       })))),
@@ -4600,6 +4602,18 @@ function App() {
     [burgerOpen, setBurgerOpen] = useState(false),
     [addShowQ, setAddShowQ] = useState(""),
     [compactCards, setCompactCards] = useState(function() { try { return localStorage.getItem("fringe-public-compact") === "1"; } catch { return false; } }),
+    [wishSort, setWishSort] = useState("added"),
+    [reviewStarFilter, setReviewStarFilter] = useState(null),
+    [nextYearList, setNextYearList] = useState(function() { try { return JSON.parse(localStorage.getItem("fringe-public-nextyear-v1") || "[]"); } catch(e) { return []; } }),
+    [nySearch, setNySearch] = useState(""),
+    [reviewView, setReviewView] = useState("tiles"),
+    [reviewOrder, setReviewOrder] = useState(function() { try { return JSON.parse(localStorage.getItem("fringe-public-review-order-v1") || "[]"); } catch { return []; } }),
+    [dragIdx, setDragIdx] = useState(null),
+    [dragOverIdx, setDragOverIdx] = useState(null),
+    [touchDragIdx, setTouchDragIdx] = useState(null),
+    [touchDragY, setTouchDragY] = useState(null),
+    reviewTouchStartRef = useRef(null),
+    reviewTileRefsRef = useRef([]),
     [X, xe] = useState(() => {
       try {
         return JSON.parse(localStorage.getItem("fringe-public-proposals-v1") || "[]")
@@ -4910,6 +4924,14 @@ function App() {
     } catch {}
   }, [ratings]), useEffect(function() {
     try {
+      localStorage.setItem("fringe-public-review-order-v1", JSON.stringify(reviewOrder))
+    } catch {}
+  }, [reviewOrder]), useEffect(function() {
+    try {
+      localStorage.setItem("fringe-public-nextyear-v1", JSON.stringify(nextYearList))
+    } catch {}
+  }, [nextYearList]), useEffect(function() {
+    try {
       localStorage.setItem(COMPANIONS_KEY, JSON.stringify(companions))
     } catch {}
   }, [companions]), useEffect(function() {
@@ -4927,6 +4949,45 @@ function App() {
       localStorage.setItem("fringe-public-proposals-v1", JSON.stringify(X))
     } catch {}
   }, [X]);
+  // Reviews: compute past show codes
+  var reviewPastCodes = useMemo(function() {
+    var showMap = {};
+    (n || []).forEach(function(s) { showMap[s.code] = s; });
+    var now = new Date();
+    var nowStr = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0");
+    var nowMin = now.getHours() * 60 + now.getMinutes();
+    var codes = [];
+    Object.keys(p).forEach(function(code) {
+      var recs = p[code];
+      if (!recs || !recs.length) return;
+      var s = showMap[code];
+      if (!s) return;
+      var allPast = recs.every(function(rec) {
+        if (!rec.date) return false;
+        if (rec.date < nowStr) return true;
+        if (rec.date === nowStr) {
+          var endMin = timeToMin_(rec.end || s.endStr);
+          if (endMin != null) return nowMin > endMin;
+          var startMin = timeToMin_(rec.start || s.startStr);
+          if (startMin != null) return nowMin > startMin + (s.duration || 60);
+          return false;
+        }
+        return false;
+      });
+      if (allPast) codes.push(code);
+    });
+    return codes;
+  }, [n, p]);
+  // Reviews: sync order with past codes
+  useEffect(function() {
+    var pastSet = new Set(reviewPastCodes);
+    var filtered = reviewOrder.filter(function(c) { return pastSet.has(c); });
+    var filteredSet = new Set(filtered);
+    reviewPastCodes.forEach(function(c) { if (!filteredSet.has(c)) filtered.push(c); });
+    if (filtered.length !== reviewOrder.length || filtered.some(function(c, i) { return reviewOrder[i] !== c; })) {
+      setReviewOrder(filtered);
+    }
+  }, [reviewPastCodes]);
   const Se = e => { w(r => {
       const l = new Set(r);
       return l.has(e) ? l.delete(e) : l.add(e), l
@@ -5280,7 +5341,14 @@ function App() {
         return va < vb ? -1 * dir : va > vb ? 1 * dir : 0;
       });
     }, [n, Pe, _e, Ve, He, Ae, Ne, Ee, nt, We, De, Ue, Ge, Je, we, qe, Ye, $, It, compFilter, companions, Qe, $e]),
-    Me = useMemo(() => n ? n.filter(e => d.has(e.code)) : [], [n, d]),
+    Me_ = useMemo(() => n ? n.filter(e => d.has(e.code)) : [], [n, d]),
+    Me = useMemo(function() {
+      var arr = Me_.slice();
+      if (wishSort === "alpha") arr.sort(function(a, b) { return (a.title || "").localeCompare(b.title || ""); });
+      else if (wishSort === "time") arr.sort(function(a, b) { return (a.startStr || "99:99").localeCompare(b.startStr || "99:99"); });
+      else if (wishSort === "venue") arr.sort(function(a, b) { return (a.venue || "").localeCompare(b.venue || ""); });
+      return arr;
+    }, [Me_, wishSort]),
     ln = useMemo(() => {
       if (!n || !xt) return [];
       const e = new Set(xt);
@@ -5580,7 +5648,7 @@ function App() {
         flex: "1 1 0",
         minWidth: 0,
         height: 44,
-        padding: 0,
+        padding: "0 2px",
         borderRadius: 10,
         border: "1px solid " + C.border,
         cursor: "pointer",
@@ -5784,7 +5852,7 @@ function App() {
       })
     }, React.createElement(HelpIcon, null)), bt ? React.createElement("div", {
       style: {
-        padding: "0 54px"
+        padding: V ? "0 62px" : "0 96px"
       }
     }, React.createElement("div", {
       onClick: () => { mt("browse"); clearFilters(); },
@@ -5840,7 +5908,7 @@ function App() {
         flexWrap: "wrap",
         marginBottom: 22
       }
-    }, pe("browse", "Browse all", "\u{1F3AD}"), pe("booked", "Bookings", "\u{1F3AB}"), pe("calendar", "Calendar", "\u{1F4C5}"), pe("map", "Map", "\u{1F5FA}\uFE0F"), pe("planner", "Planner", "\u2728"), pe("proposals", "Pitch a Day!", "\u{1F4CB}"), pe("plan", "Wishlist", "\u{1F49C}"), pe("stats", "Stats", "\u{1F4CA}")))
+    }, pe("booked", "Bookings", "\u{1F3AB}"), pe("browse", "Browse all", "\u{1F3AD}"), pe("calendar", "Calendar", "\u{1F4C5}"), pe("map", "Map", "\u{1F5FA}\uFE0F"), pe("nextyear", "Next Yr", "\u{1F52E}"), pe("proposals", "Pitch a Day!", "\u{1F4CB}"), pe("planner", "Planner", "\u2728"), pe("reviews", "Reviews", "\u2B50"), pe("stats", "Stats", "\u{1F4CA}"), pe("plan", "Wishlist", "\u{1F49C}")))
   }(), V && burgerOpen && React.createElement("div", {
     onClick: function(ev) { if (ev.target === ev.currentTarget) setBurgerOpen(false); },
     style: { position: "fixed", inset: 0, zIndex: 9998, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }
@@ -5851,7 +5919,7 @@ function App() {
       React.createElement("div", { style: { fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: "uppercase", color: C.txt2 } }, "Edinburgh Fringe"),
       React.createElement("div", { style: { fontSize: 22, fontWeight: 900, background: "linear-gradient(90deg,var(--pink),var(--accent))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" } }, "PLANNER ", SITE_YEAR)),
     React.createElement("div", { style: { padding: "12px 10px", flex: 1 } },
-      [["browse", "Browse All", "\u{1F3AD}"], ["booked", "Bookings", "\u{1F3AB}"], ["calendar", "Calendar", "\u{1F4C5}"], ["map", "Map", "\u{1F5FA}\uFE0F"], ["planner", "Planner", "\u2728"], ["proposals", "Pitch a Day!", "\u{1F4CB}"], ["plan", "Wishlist", "\u{1F49C}"], ["stats", "Stats", "\u{1F4CA}"]].map(function(item) {
+      [["booked", "Bookings", "\u{1F3AB}"], ["browse", "Browse All", "\u{1F3AD}"], ["calendar", "Calendar", "\u{1F4C5}"], ["map", "Map", "\u{1F5FA}\uFE0F"], ["nextyear", "Next Year", "\u{1F52E}"], ["proposals", "Pitch a Day!", "\u{1F4CB}"], ["planner", "Planner", "\u2728"], ["reviews", "Reviews", "\u2B50"], ["stats", "Stats", "\u{1F4CA}"], ["plan", "Wishlist", "\u{1F49C}"]].map(function(item) {
         var isActive = Q === item[0];
         return React.createElement("button", {
           key: item[0],
@@ -6003,16 +6071,17 @@ function App() {
       z.rec.date && (c[z.rec.date] = (c[z.rec.date] || 0) + 1)
     });
     var T = Object.keys(c),
-      B = T.slice().sort(function(z, L) {
-        return c[L] - c[z]
-      })[0],
+      _bMax = T.length ? Math.max.apply(null, T.map(function(z) { return c[z]; })) : 0,
+      B = T.filter(function(z) { return c[z] === _bMax; }),
       j = r.filter(function(z) {
         return perfPrice_(z.s, z.rec) > 0
       }).sort(function(z, L) {
         return perfPrice_(L.s, L.rec) - perfPrice_(z.s, z.rec)
       }),
-      H = j[0],
-      m = j[j.length - 1],
+      _topPrice = j.length ? perfPrice_(j[0].s, j[0].rec) : 0,
+      H = j.filter(function(z) { return perfPrice_(z.s, z.rec) === _topPrice; }),
+      _botPrice = j.length ? perfPrice_(j[j.length - 1].s, j[j.length - 1].rec) : 0,
+      m = j.filter(function(z) { return perfPrice_(z.s, z.rec) === _botPrice; }),
       re = r.filter(function(z) {
         return !perfPrice_(z.s, z.rec)
       }).length,
@@ -6174,7 +6243,7 @@ function App() {
         flexWrap: "wrap",
         marginBottom: 18
       }
-    }, B && React.createElement("div", {
+    }, B.length > 0 && React.createElement("div", {
       style: {
         background: C.card,
         border: "1px solid " + C.border,
@@ -6192,18 +6261,12 @@ function App() {
         textTransform: "uppercase",
         letterSpacing: .5
       }
-    }, "Busiest day"), React.createElement("div", {
-      style: {
-        fontSize: 16,
-        fontWeight: 800,
-        marginTop: 3
-      }
-    }, ze(B)), React.createElement("div", {
-      style: {
-        fontSize: 12,
-        color: C.txt2
-      }
-    }, c[B], " shows"))), ge.length > 0 && React.createElement("div", {
+    }, B.length > 1 ? "Busiest days (tied)" : "Busiest day"),
+      B.map(function(day) {
+        return React.createElement("div", {key: day, style: {marginTop: 3}},
+          React.createElement("div", {style: {fontSize: 16, fontWeight: 800}}, ze(day)),
+          React.createElement("div", {style: {fontSize: 12, color: C.txt2}}, c[day] + " shows"));
+      }))), ge.length > 0 && React.createElement("div", {
       style: {
         background: "rgba(168,85,247,0.08)",
         border: "1px solid rgba(168,85,247,0.28)",
@@ -6262,8 +6325,8 @@ function App() {
       var maxG = ve[gKeys[0]] || 1;
       var minG = ve[gKeys[gKeys.length - 1]] || 1;
       var gcols = ["#F472B6","#34D399","#60A5FA","#FBBF24","#A78BFA","#FB923C","#2DD4BF","#F87171","#818CF8","#4ADE80"];
-      return React.createElement("div", {style: {marginBottom: 18}},
-        React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10}}, "By genre"),
+      return React.createElement("div", {style: {marginBottom: 14, marginTop: 20, background: C.card, border: "1px solid " + C.border, borderRadius: 14, padding: "14px 16px"}},
+        React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}, "By genre"),
         React.createElement("div", {style: {display: "flex", flexWrap: "wrap", gap: "6px 10px", alignItems: "center", justifyContent: "center", padding: "10px 0"}},
           gKeys.map(function(g, idx) {
             var ratio = maxG === minG ? 1 : (ve[g] - minG) / (maxG - minG);
@@ -6285,7 +6348,35 @@ function App() {
           })
         )
       );
-    }(), Object.keys(Ce).length > 0 && je(Fe(Ce, 6), "Top venues", l)),
+    }(), Object.keys(Ce).length > 0 && function() {
+      var vKeys = Object.keys(Ce).sort(function(a, b) { return Ce[b] - Ce[a]; });
+      var maxV = Ce[vKeys[0]] || 1;
+      var minV = Ce[vKeys[vKeys.length - 1]] || 1;
+      var vcols = ["#FB923C","#60A5FA","#F472B6","#34D399","#FBBF24","#A78BFA","#2DD4BF","#F87171","#818CF8","#4ADE80"];
+      return React.createElement("div", {style: {marginBottom: 14, marginTop: 20, background: C.card, border: "1px solid " + C.border, borderRadius: 14, padding: "14px 16px"}},
+        React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}, "Top venues"),
+        React.createElement("div", {style: {display: "flex", flexWrap: "wrap", gap: "6px 10px", alignItems: "center", justifyContent: "center", padding: "10px 0"}},
+          vKeys.map(function(v, idx) {
+            var ratio = maxV === minV ? 1 : (Ce[v] - minV) / (maxV - minV);
+            var sz = Math.round(12 + ratio * 16);
+            var op = 0.55 + ratio * 0.45;
+            return React.createElement("span", {
+              key: v,
+              title: v + ": " + Ce[v] + " show" + (Ce[v] === 1 ? "" : "s"),
+              style: {
+                fontSize: sz,
+                fontWeight: ratio > 0.5 ? 900 : 700,
+                color: vcols[idx % vcols.length],
+                opacity: op,
+                cursor: "default",
+                whiteSpace: "nowrap",
+                lineHeight: 1.3
+              }
+            }, v + " (" + Ce[v] + ")");
+          })
+        )
+      );
+    }()),
 
     // --- Personal insights ---
     accHead("personal", "\u{1F4A1}", "Personal Insights"),
@@ -6313,6 +6404,38 @@ function App() {
         );
       }(),
 
+      // Top Rated Shows (5-star list)
+      function() {
+        var fiveStarCodes = Object.keys(ratings).filter(function(k) { return ratings[k] === 5 && p[k]; });
+        if (!fiveStarCodes.length) return null;
+        var fiveStarShows = fiveStarCodes.map(function(k) { return e[k]; }).filter(Boolean).sort(function(a, b) { return (a.title || "").localeCompare(b.title || ""); });
+        if (!fiveStarShows.length) return null;
+        return React.createElement("div", {style: {marginBottom: 10, marginTop: 20}},
+          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}, "⭐ Top Rated Shows"),
+          React.createElement("div", {style: {display: "flex", flexDirection: "column", gap: 6}},
+            fiveStarShows.map(function(show) {
+              return React.createElement("div", {
+                key: show.code,
+                onClick: function() { de(show); },
+                style: {
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "10px 14px", borderRadius: 10,
+                  background: "rgba(251,191,36,0.08)",
+                  border: "1px solid rgba(251,191,36,0.2)",
+                  cursor: "pointer", transition: "background 0.15s"
+                }
+              },
+                React.createElement("span", {style: {fontSize: 14, color: "#FBBF24", flexShrink: 0}}, "★★★★★"),
+                React.createElement("div", {style: {flex: 1, minWidth: 0}},
+                  React.createElement("div", {style: {fontSize: 13, fontWeight: 800, color: C.txt, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}}, show.title),
+                  React.createElement("div", {style: {fontSize: 11, color: C.txt3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}}, show.venue || "")
+                )
+              );
+            })
+          )
+        );
+      }(),
+
       // Companions breakdown
       function() {
         var compCounts = {};
@@ -6320,18 +6443,19 @@ function App() {
         Object.keys(p).forEach(function(k) { (p[k] || []).forEach(function(rec) { if (rec.companions) rec.companions.split(/\s*,\s*/).forEach(function(name) { name = name.trim(); if (name) compCounts[name] = (compCounts[name] || 0) + 1; }); }); });
         if (!Object.keys(compCounts).length) return null;
         var sorted = Object.keys(compCounts).sort(function(a, b) { return compCounts[b] - compCounts[a]; });
-        var topComp = sorted[0];
-        return React.createElement("div", {style: {marginBottom: 14}},
-          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}}, "\u{1F465} Companions"),
+        var topCount = compCounts[sorted[0]];
+        return React.createElement("div", {style: {marginBottom: 10, marginTop: 20, background: C.card, border: "1px solid " + C.border, borderRadius: 14, padding: "14px 16px"}},
+          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}, "\u{1F465} Companions"),
           React.createElement("div", {style: {display: "flex", gap: 8, flexWrap: "wrap"}},
             sorted.slice(0, 6).map(function(name) {
+              var isTop = compCounts[name] === topCount;
               return React.createElement("div", {
                 key: name,
                 style: {
                   padding: "8px 14px",
                   borderRadius: 10,
-                  background: name === topComp ? "rgba(168,85,247,0.15)" : C.card,
-                  border: "1px solid " + (name === topComp ? "rgba(168,85,247,0.4)" : C.border),
+                  background: isTop ? "rgba(168,85,247,0.15)" : C.card,
+                  border: "1px solid " + (isTop ? "rgba(168,85,247,0.4)" : C.border),
                   fontSize: 13, fontWeight: 700
                 }
               }, name, React.createElement("span", {style: {marginLeft: 6, fontSize: 11, color: C.txt2}}, compCounts[name] + " show" + (compCounts[name] === 1 ? "" : "s")));
@@ -6354,11 +6478,13 @@ function App() {
         });
         var maxDay = Math.max.apply(null, orderedDays.map(function(d) { return days[d]; }));
         if (maxDay === 0) return null;
-        var favDay = orderedDays.reduce(function(a, b) { return days[a] >= days[b] ? a : b; });
+        var _maxDayCount = Math.max.apply(null, orderedDays.map(function(d) { return days[d]; }));
+        var favDays = orderedDays.filter(function(d) { return days[d] === _maxDayCount; });
+        var favDay = favDays[0];
         var dayColors = {"Monday": "#60A5FA", "Tuesday": "#34D399", "Wednesday": "#FBBF24", "Thursday": "#F472B6", "Friday": "#A78BFA", "Saturday": "#FB923C", "Sunday": "#F87171"};
-        return React.createElement("div", {style: {marginBottom: 14}},
+        return React.createElement("div", {style: {marginBottom: 10, marginTop: 20, background: C.card, border: "1px solid " + C.border, borderRadius: 14, padding: "14px 16px"}},
           React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2}},
-            "\u{1F4C5} Shows by day of week \u2014 you love " + favDay + "s!"),
+            "\u{1F4C5} Shows by day of week \u2014 you love " + (favDays.length > 1 ? favDays.join(" & ") + "s (tied)!" : favDay + "s!")),
           React.createElement("div", {style: {display: "flex", gap: 6, alignItems: "flex-end", height: 80}},
             orderedDays.map(function(d) {
               var abbr = ({"Monday":"MON","Tuesday":"TUES","Wednesday":"WED","Thursday":"THURS","Friday":"FRI","Saturday":"SAT","Sunday":"SUN"})[d];
@@ -6374,11 +6500,11 @@ function App() {
                     height: pct + "%",
                     minHeight: 4,
                     borderRadius: "4px 4px 0 0",
-                    background: d === favDay ? "linear-gradient(180deg," + dayColors[d] + ",rgba(168,85,247,0.6))" : dayColors[d],
+                    background: favDays.indexOf(d) >= 0 ? "linear-gradient(180deg," + dayColors[d] + ",rgba(168,85,247,0.6))" : dayColors[d],
                     opacity: days[d] > 0 ? 1 : 0.15
                   }
                 }),
-                React.createElement("span", {style: {fontSize: 9, color: d === favDay ? dayColors[d] : C.txt3, fontWeight: 700, textAlign: "center"}}, abbr)
+                React.createElement("span", {style: {fontSize: 9, color: favDays.indexOf(d) >= 0 ? dayColors[d] : C.txt3, fontWeight: 700, textAlign: "center"}}, abbr)
               );
             })
           )
@@ -6400,8 +6526,8 @@ function App() {
         var total = slotKeys.reduce(function(a, k) { return a + slots[k]; }, 0);
         if (total === 0) return null;
         var slotColors = ["#FBBF24", "#FB923C", "#A78BFA", "#818CF8"];
-        return React.createElement("div", {style: {marginBottom: 14}},
-          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}}, "\u23F0 When you go"),
+        return React.createElement("div", {style: {marginBottom: 10, marginTop: 20, background: C.card, border: "1px solid " + C.border, borderRadius: 14, padding: "14px 16px"}},
+          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}, "\u23F0 When you go"),
           React.createElement("div", {style: {display: "flex", borderRadius: 10, overflow: "hidden", height: 28}},
             slotKeys.map(function(k, idx) {
               var pct = total > 0 ? slots[k] / total * 100 : 0;
@@ -6454,21 +6580,25 @@ function App() {
         // Average shows per day
         var avgPerDay = Math.round(r.length / uniqueDates.length * 10) / 10;
         // Earliest and latest show
-        var earliest = null, latest = null;
+        var _earliestT = null, _latestT = null;
         r.forEach(function(z) {
           var t = timeToMin_(z.rec.start || z.s.startStr);
           if (t == null) return;
-          if (earliest == null || t < earliest.t) earliest = {t: t, s: z.s};
-          if (latest == null || t > latest.t) latest = {t: t, s: z.s};
+          if (_earliestT == null || t < _earliestT) _earliestT = t;
+          if (_latestT == null || t > _latestT) _latestT = t;
         });
+        var earliestCount = _earliestT != null ? r.filter(function(z) { return timeToMin_(z.rec.start || z.s.startStr) === _earliestT; }).length : 0;
+        var latestCount = _latestT != null ? r.filter(function(z) { return timeToMin_(z.rec.start || z.s.startStr) === _latestT; }).length : 0;
+        var earliest = _earliestT != null ? {t: _earliestT} : null;
+        var latest = _latestT != null ? {t: _latestT} : null;
         var fmtT = function(m) { return Math.floor(m / 60) + ":" + ("0" + (m % 60)).slice(-2); };
         return React.createElement("div", {
           style: { display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }
         },
           maxStreak > 1 && le(maxStreak + " days", "\u{1F525} Longest streak", "#FB923C"),
           le(avgPerDay, "Shows per day (avg)", "#60A5FA"),
-          earliest && le(fmtT(earliest.t), "Earliest show", "#FBBF24"),
-          latest && le(fmtT(latest.t), "Latest show", "#818CF8")
+          earliest && le(fmtT(earliest.t), earliestCount > 1 ? "Earliest shows (" + earliestCount + " tied)" : "Earliest show", "#FBBF24"),
+          latest && le(fmtT(latest.t), latestCount > 1 ? "Latest shows (" + latestCount + " tied)" : "Latest show", "#818CF8")
         );
       }(),
 
@@ -6485,8 +6615,8 @@ function App() {
         var diversityPct = allGenreCount > 0 ? Math.round(genreKeys.length / allGenreCount * 100) : 0;
         var genreColors = ["#F472B6", "#34D399", "#60A5FA", "#FBBF24", "#A78BFA", "#FB923C", "#2DD4BF", "#F87171", "#818CF8", "#4ADE80"];
         var total = r.length;
-        return React.createElement("div", {style: {marginBottom: 14}},
-          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}},
+        return React.createElement("div", {style: {marginBottom: 10, marginTop: 20, background: C.card, border: "1px solid " + C.border, borderRadius: 14, padding: "14px 16px"}},
+          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}},
             "\u{1F3AD} Genre diversity \u2014 " + genreKeys.length + " of " + allGenreCount + " genres (" + diversityPct + "%)"),
           React.createElement("div", {style: {display: "flex", borderRadius: 10, overflow: "hidden", height: 24}},
             genreKeys.sort(function(a, b) { return myGenres[b] - myGenres[a]; }).map(function(g, idx) {
@@ -6534,24 +6664,30 @@ function App() {
     },
       React.createElement("div", {style: {display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14}},
         le("\xA3" + Math.round(i * 100) / 100, "Total spend", "#34d399"),
-        H && le(priceLabel(perfPrice_(H.s, H.rec)), "Most expensive", "#F87171"),
-        m && m !== H && le(priceLabel(perfPrice_(m.s, m.rec)), "Cheapest", "#34D399"),
+        H.length > 0 && le(priceLabel(_topPrice), "Most expensive", "#F87171"),
+        m.length > 0 && _botPrice !== _topPrice && le(priceLabel(_botPrice), "Cheapest", "#34D399"),
         re > 0 && le(re, "Free shows", "#4ADE80")
       ),
       React.createElement("div", {style: {display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14}},
-        H && React.createElement("div", {
+        H.length > 0 && React.createElement("div", {
           style: {background: C.card, border: "1px solid " + C.border, borderRadius: 14, padding: "14px 16px", flex: "1 1 200px", minWidth: 0, overflow: "hidden"}
         },
-          React.createElement("div", {style: {fontSize: 11, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: .5}}, "Most expensive"),
-          React.createElement("div", {style: {fontSize: 15, fontWeight: 800, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: V ? "normal" : "nowrap", wordBreak: "break-word"}}, H.s.title),
-          React.createElement("div", {style: {fontSize: 12, color: C.txt2}}, priceLabel(perfPrice_(H.s, H.rec)))
+          React.createElement("div", {style: {fontSize: 11, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: .5}}, H.length > 1 ? "Most expensive (tied)" : "Most expensive"),
+          H.map(function(item) {
+            return React.createElement("div", {key: item.code + "-" + item.bIdx, style: {marginTop: 3}},
+              React.createElement("div", {style: {fontSize: 15, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: V ? "normal" : "nowrap", wordBreak: "break-word"}}, item.s.title),
+              React.createElement("div", {style: {fontSize: 12, color: C.txt2}}, priceLabel(perfPrice_(item.s, item.rec))));
+          })
         ),
-        m && m !== H && React.createElement("div", {
+        m.length > 0 && _botPrice !== _topPrice && React.createElement("div", {
           style: {background: C.card, border: "1px solid " + C.border, borderRadius: 14, padding: "14px 16px", flex: "1 1 200px", minWidth: 0, overflow: "hidden"}
         },
-          React.createElement("div", {style: {fontSize: 11, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: .5}}, "Cheapest ticket"),
-          React.createElement("div", {style: {fontSize: 15, fontWeight: 800, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: V ? "normal" : "nowrap", wordBreak: "break-word"}}, m.s.title),
-          React.createElement("div", {style: {fontSize: 12, color: C.txt2}}, priceLabel(perfPrice_(m.s, m.rec)))
+          React.createElement("div", {style: {fontSize: 11, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: .5}}, m.length > 1 ? "Cheapest tickets (tied)" : "Cheapest ticket"),
+          m.map(function(item) {
+            return React.createElement("div", {key: item.code + "-" + item.bIdx, style: {marginTop: 3}},
+              React.createElement("div", {style: {fontSize: 15, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: V ? "normal" : "nowrap", wordBreak: "break-word"}}, item.s.title),
+              React.createElement("div", {style: {fontSize: 12, color: C.txt2}}, priceLabel(perfPrice_(item.s, item.rec))));
+          })
         )
       ),
       function() {
@@ -6566,8 +6702,8 @@ function App() {
         var maxSpend = sorted.length ? genreSpend[sorted[0]] : 0;
         if (!sorted.length) return null;
         var spendColors = ["#F472B6", "#34D399", "#60A5FA", "#FBBF24", "#A78BFA", "#FB923C"];
-        return React.createElement("div", {style: {marginBottom: 14}},
-          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}}, "Spend by genre"),
+        return React.createElement("div", {style: {marginBottom: 10, marginTop: 20, background: C.card, border: "1px solid " + C.border, borderRadius: 14, padding: "14px 16px"}},
+          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}, "Spend by genre"),
           sorted.slice(0, 6).map(function(g, idx) {
             return React.createElement("div", {key: g, style: {marginBottom: 6}},
               React.createElement("div", {style: {display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 2}},
@@ -6591,8 +6727,8 @@ function App() {
         var dates = Object.keys(daySpend).sort();
         if (dates.length < 2) return null;
         var maxD = Math.max.apply(null, dates.map(function(d) { return daySpend[d]; }));
-        return React.createElement("div", null,
-          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}}, "Spend by day"),
+        return React.createElement("div", {style: {marginTop: 14, background: C.card, border: "1px solid " + C.border, borderRadius: 14, padding: "14px 16px"}},
+          React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}, "Spend by day"),
           React.createElement("div", {style: {display: "flex", gap: 3, alignItems: "flex-end", height: 70}},
             dates.map(function(d) {
               var pct = maxD > 0 ? Math.max(daySpend[d] / maxD * 100, 5) : 5;
@@ -6639,15 +6775,20 @@ function App() {
           }
         }
         var bkr = item.rec.booker || bookerData[item.code] || "";
-        if (bkr.trim()) bookerCounts[bkr.trim()] = (bookerCounts[bkr.trim()] || 0) + 1;
+        if (bkr.trim() && bkr.trim() !== "Myself") bookerCounts[bkr.trim()] = (bookerCounts[bkr.trim()] || 0) + 1;
       });
       var friendNames = Object.keys(friendCounts).sort(function(a, b) { return friendCounts[b] - friendCounts[a]; });
       var bookerNames = Object.keys(bookerCounts).sort(function(a, b) { return bookerCounts[b] - bookerCounts[a]; });
-      var topFriend = friendNames[0] || null;
-      var topBooker = bookerNames[0] || null;
+      var _maxFriendCount = friendNames.length ? friendCounts[friendNames[0]] : 0;
+      var topFriends = friendNames.filter(function(nm) { return friendCounts[nm] === _maxFriendCount; });
+      var topFriend = topFriends[0] || null;
+      var _maxBookerCount = bookerNames.length ? bookerCounts[bookerNames[0]] : 0;
+      var topBookers = bookerNames.filter(function(nm) { return bookerCounts[nm] === _maxBookerCount; });
+      var topBooker = topBookers[0] || null;
       var maxFriend = topFriend ? friendCounts[topFriend] : 0;
-      var topPair = null, topPairCount = 0;
-      Object.keys(pairCounts).forEach(function(pk) { if (pairCounts[pk] > topPairCount) { topPairCount = pairCounts[pk]; topPair = pk; } });
+      var topPairCount = 0;
+      Object.keys(pairCounts).forEach(function(pk) { if (pairCounts[pk] > topPairCount) { topPairCount = pairCounts[pk]; } });
+      var topPairs = Object.keys(pairCounts).filter(function(pk) { return pairCounts[pk] === topPairCount; });
 
       if (friendNames.length === 0 && bookerNames.length === 0) {
         return React.createElement("div", {style: {padding: "16px 0", color: C.txt3, fontSize: 13, textAlign: "center"}},
@@ -6659,13 +6800,13 @@ function App() {
       return React.createElement("div", {style: {marginTop: 14}},
         // Stat tiles row
         React.createElement("div", {style: {display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14}},
-          topFriend && le(topFriend, "Top friend (" + maxFriend + " show" + (maxFriend === 1 ? "" : "s") + ")", "#A78BFA"),
+          topFriend && le(topFriends.length > 1 ? topFriends.join(", ") : topFriend, (topFriends.length > 1 ? "Top friends (tied, " : "Top friend (") + maxFriend + " show" + (maxFriend === 1 ? "" : "s") + ")", "#A78BFA"),
           le(soloCount, "Solo show" + (soloCount === 1 ? "" : "s"), "#60A5FA"),
           le(l - soloCount, "With friend" + (l - soloCount === 1 ? "" : "s"), "#34D399"),
-          topBooker && le(topBooker, "Top booker (" + bookerCounts[topBooker] + ")", "#FB923C")),
+          topBooker && le(topBookers.length > 1 ? topBookers.join(", ") : topBooker, (topBookers.length > 1 ? "Top bookers (tied, " : "Top booker (") + _maxBookerCount + ")", "#FB923C")),
 
         // Shows per friend bar chart
-        friendNames.length > 0 && React.createElement("div", {style: {marginBottom: 14}},
+        friendNames.length > 0 && React.createElement("div", {style: {marginBottom: 10, marginTop: 20, background: C.card, border: "1px solid " + C.border, borderRadius: 14, padding: "14px 16px"}},
           React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2}},
             "\u{1F465} Shows per friend"),
           React.createElement("div", {style: {display: "flex", flexDirection: "column", gap: 6, marginTop: 8}},
@@ -6680,9 +6821,9 @@ function App() {
             }))),
 
         // Booker breakdown
-        bookerNames.length > 0 && React.createElement("div", {style: {marginBottom: 14}},
+        bookerNames.length > 0 && React.createElement("div", {style: {marginBottom: 10, marginTop: 20, background: C.card, border: "1px solid " + C.border, borderRadius: 14, padding: "14px 16px"}},
           React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2}},
-            "\u{1F3AB} Who’s booking?"),
+            "\u{1F3AB} Who booked shows?"),
           React.createElement("div", {style: {display: "flex", flexDirection: "column", gap: 6, marginTop: 8}},
             bookerNames.slice(0, 8).map(function(nm, idx) {
               var bMax = bookerCounts[bookerNames[0]];
@@ -6697,7 +6838,7 @@ function App() {
 
         // Best duo and biggest group
         React.createElement("div", {style: {display: "flex", gap: 10, flexWrap: "wrap"}},
-          topPair && topPairCount > 1 && le(topPair, "Best duo (" + topPairCount + " show" + (topPairCount === 1 ? "" : "s") + " together)", "#E879F9"),
+          topPairs.length > 0 && topPairCount > 1 && le(topPairs.join(", "), (topPairs.length > 1 ? "Best duos (tied, " : "Best duo (") + topPairCount + " show" + (topPairCount === 1 ? "" : "s") + " together)", "#E879F9"),
           biggestShow && biggestGroup > 1 && le(biggestGroup + " people", "Biggest group — " + (biggestShow.s.title || "").slice(0, 30), "#2DD4BF"))
       );
     }(),
@@ -6724,11 +6865,19 @@ function App() {
     var shortShow = durations.length ? Math.min.apply(null, durations.map(function(s) { return s.duration; })) : 0;
     var longShow = durations.length ? Math.max.apply(null, durations.map(function(s) { return s.duration; })) : 0;
     var totalHrs = durations.length ? Math.round(durations.reduce(function(a, s) { return a + s.duration; }, 0) / 60) : 0;
-    var topGenre = Object.keys(allGenres).sort(function(a, b) { return allGenres[b] - allGenres[a]; })[0] || "—";
-    var topVenue = Object.keys(allVenues).sort(function(a, b) { return allVenues[b] - allVenues[a]; })[0] || "—";
-    var topCountry = Object.keys(allCountries).sort(function(a, b) { return allCountries[b] - allCountries[a]; })[0] || "—";
+    var _topGenreMax = Object.keys(allGenres).length ? Math.max.apply(null, Object.keys(allGenres).map(function(k) { return allGenres[k]; })) : 0;
+    var topGenres = Object.keys(allGenres).filter(function(k) { return allGenres[k] === _topGenreMax; });
+    var topGenre = topGenres[0] || "—";
+    var _topVenueMax = Object.keys(allVenues).length ? Math.max.apply(null, Object.keys(allVenues).map(function(k) { return allVenues[k]; })) : 0;
+    var topVenues = Object.keys(allVenues).filter(function(k) { return allVenues[k] === _topVenueMax; });
+    var topVenue = topVenues[0] || "—";
+    var _topCountryMax = Object.keys(allCountries).length ? Math.max.apply(null, Object.keys(allCountries).map(function(k) { return allCountries[k]; })) : 0;
+    var topCountries = Object.keys(allCountries).filter(function(k) { return allCountries[k] === _topCountryMax; });
+    var topCountry = topCountries[0] || "—";
     var ages = {}; all.forEach(function(s) { if (s.age) ages[s.age] = (ages[s.age] || 0) + 1; });
-    var topAge = Object.keys(ages).sort(function(a, b) { return ages[b] - ages[a]; })[0] || "—";
+    var _topAgeMax = Object.keys(ages).length ? Math.max.apply(null, Object.keys(ages).map(function(k) { return ages[k]; })) : 0;
+    var topAges = Object.keys(ages).filter(function(k) { return ages[k] === _topAgeMax; });
+    var topAge = topAges[0] || "—";
     var solos = all.filter(function(s) { return s.performers === "1" || s.performers === 1; }).length;
     var accessible = all.filter(function(s) { return s.access && s.access.trim(); }).length;
     var accessPct = totalShows ? Math.round(accessible / totalShows * 100) : 0;
@@ -6742,9 +6891,9 @@ function App() {
       {label: "Genres", value: genreCount, color: "#60A5FA"},
       {label: "Venues", value: venueCount, color: "#F472B6"},
       {label: "Countries", value: countryCount, color: "#FBBF24"},
-      {label: "Most popular genre", value: topGenre + " (" + (allGenres[topGenre]||0) + ")", color: "#34D399"},
-      {label: "Busiest venue", value: topVenue, color: "#FB923C"},
-      {label: "Top country", value: topCountry, color: "#2DD4BF"},
+      {label: topGenres.length > 1 ? "Top genres (tied)" : "Most popular genre", value: topGenres.map(function(g) { return g + " (" + allGenres[g] + ")"; }).join(", "), color: "#34D399"},
+      {label: topVenues.length > 1 ? "Busiest venues (tied)" : "Busiest venue", value: topVenues.join(", "), color: "#FB923C"},
+      {label: topCountries.length > 1 ? "Top countries (tied)" : "Top country", value: topCountries.join(", "), color: "#2DD4BF"},
       {label: "Free shows", value: freeShows, color: "#4ADE80"},
       {label: "Average ticket", value: "£" + avgPrice.toFixed(2), color: "#F472B6"},
       {label: "Median ticket", value: "£" + medianPrice.toFixed(2), color: "#818CF8"},
@@ -6757,7 +6906,7 @@ function App() {
       {label: "Solo performers", value: solos, color: "#2DD4BF"},
       {label: "Morning shows (before noon)", value: morningShows, color: "#FBBF24"},
       {label: "Evening shows (6pm+)", value: eveningShows, color: "#818CF8"},
-      {label: "Most common age rating", value: topAge + " (" + (ages[topAge]||0) + ")", color: "#F87171"}
+      {label: topAges.length > 1 ? "Top age ratings (tied)" : "Most common age rating", value: topAges.map(function(a) { return a + " (" + ages[a] + ")"; }).join(", "), color: "#F87171"}
     ];
 
     return React.createElement("div", {style: {marginTop: 14}},
@@ -6778,8 +6927,8 @@ function App() {
       ),
 
       // Price distribution histogram
-      priced.length > 5 && React.createElement("div", {style: {marginTop: 18}},
-        React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}}, "\u{1F4B7} Price distribution"),
+      priced.length > 5 && React.createElement("div", {style: {marginTop: 24}},
+        React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}, "\u{1F4B7} Price distribution"),
         function() {
           var buckets = [
             {label: "Free", min: 0, max: 0, count: freeShows, color: "#4ADE80"},
@@ -6812,8 +6961,8 @@ function App() {
       ),
 
       // Duration distribution
-      durations.length > 5 && React.createElement("div", {style: {marginTop: 18}},
-        React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}}, "\u23F1 Duration spread"),
+      durations.length > 5 && React.createElement("div", {style: {marginTop: 24}},
+        React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}, "\u23F1 Duration spread"),
         function() {
           var durBuckets = [
             {label: "<30m", min: 0, max: 29, count: 0, color: "#FBBF24"},
@@ -6845,8 +6994,8 @@ function App() {
       ),
 
       // Start time heatmap
-      React.createElement("div", {style: {marginTop: 18}},
-        React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}}, "\u{1F570} Shows by start time"),
+      React.createElement("div", {style: {marginTop: 24}},
+        React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4}}, "\u{1F570} Shows by start time"),
         function() {
           var hours = {};
           all.forEach(function(s) {
@@ -6856,7 +7005,9 @@ function App() {
           var hourKeys = [];
           for (var hi = 8; hi <= 23; hi++) hourKeys.push(hi);
           var maxH = Math.max.apply(null, hourKeys.map(function(h) { return hours[h] || 0; }));
-          var peakHour = hourKeys.reduce(function(a, b) { return (hours[a] || 0) >= (hours[b] || 0) ? a : b; });
+          var _peakMax = Math.max.apply(null, hourKeys.map(function(h) { return hours[h] || 0; }));
+          var peakHours = hourKeys.filter(function(h) { return (hours[h] || 0) === _peakMax; });
+          var peakHour = peakHours[0];
           return React.createElement(React.Fragment, null,
             React.createElement("div", {style: {display: "flex", gap: 2, alignItems: "flex-end", height: 60}},
               hourKeys.map(function(h) {
@@ -6873,7 +7024,7 @@ function App() {
                 );
               })
             ),
-            React.createElement("div", {style: {fontSize: 11, color: C.txt2, marginTop: 4}}, "Peak hour: ", React.createElement("b", null, peakHour + ":00"), " with " + (hours[peakHour] || 0) + " shows")
+            React.createElement("div", {style: {fontSize: 11, color: C.txt2, marginTop: 4}}, peakHours.length > 1 ? "Peak hours (tied): " : "Peak hour: ", React.createElement("b", null, peakHours.map(function(h) { return h + ":00"; }).join(", ")), " with " + _peakMax + " shows")
           );
         }()
       ),
@@ -6935,6 +7086,230 @@ function App() {
     );
   }()
   )
+  }(), Q === "reviews" && function() {
+    var showMap = {};
+    (n || []).forEach(function(s) { showMap[s.code] = s; });
+    var ordered = reviewOrder;
+    var filteredOrdered = reviewStarFilter != null ? ordered.filter(function(code) {
+      var r = ratings[code] || 0;
+      return reviewStarFilter === 0 ? (r < 1 || r > 5) : r === reviewStarFilter;
+    }) : ordered;
+    var moveItem = function(fromIdx, toIdx) {
+      if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0 || fromIdx >= ordered.length || toIdx >= ordered.length) return;
+      var arr = ordered.slice();
+      var item = arr.splice(fromIdx, 1)[0];
+      arr.splice(toIdx, 0, item);
+      setReviewOrder(arr);
+    };
+    var setRank = function(code, newRank) {
+      var fromIdx = ordered.indexOf(code);
+      var toIdx = Math.max(0, Math.min(ordered.length - 1, newRank - 1));
+      if (fromIdx !== toIdx) moveItem(fromIdx, toIdx);
+    };
+    var starsStr = function(r) { var s = ""; for (var i = 0; i < 5; i++) s += i < r ? "★" : "☆"; return s; };
+    // Touch drag handlers
+    var handleTouchStart = function(idx, ev) {
+      var touch = ev.touches[0];
+      reviewTouchStartRef.current = { idx: idx, startY: touch.clientY, moved: false };
+      setTouchDragIdx(idx);
+    };
+    var handleTouchMove = function(ev) {
+      if (reviewTouchStartRef.current == null) return;
+      ev.preventDefault();
+      var touch = ev.touches[0];
+      reviewTouchStartRef.current.moved = true;
+      setTouchDragY(touch.clientY);
+      // Determine which tile we're over
+      var refs = reviewTileRefsRef.current;
+      for (var i = 0; i < refs.length; i++) {
+        if (!refs[i]) continue;
+        var rect = refs[i].getBoundingClientRect();
+        if (touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+          setDragOverIdx(i);
+          break;
+        }
+      }
+    };
+    var handleTouchEnd = function() {
+      if (reviewTouchStartRef.current != null && reviewTouchStartRef.current.moved && dragOverIdx != null) {
+        moveItem(reviewTouchStartRef.current.idx, dragOverIdx);
+      }
+      reviewTouchStartRef.current = null;
+      setTouchDragIdx(null);
+      setTouchDragY(null);
+      setDragOverIdx(null);
+    };
+    return React.createElement(React.Fragment, null,
+      React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 } },
+        React.createElement("div", { style: { fontSize: V ? 18 : 22, fontWeight: 900, background: "linear-gradient(90deg,var(--pink),var(--accent))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" } }, "⭐ Reviews"),
+        React.createElement("div", { style: { display: "flex", gap: 0, borderRadius: 10, overflow: "hidden", border: "1px solid " + C.border } },
+          React.createElement("button", {
+            onClick: function() { setReviewView("tiles"); },
+            style: { padding: "7px 14px", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", background: reviewView === "tiles" ? C.accent : "transparent", color: reviewView === "tiles" ? "#fff" : C.txt2 }
+          }, "Tiles"),
+          React.createElement("button", {
+            onClick: function() { setReviewView("table"); },
+            style: { padding: "7px 14px", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", background: reviewView === "table" ? C.accent : "transparent", color: reviewView === "table" ? "#fff" : C.txt2 }
+          }, "Table")
+        )
+      ),
+      ordered.length > 0 && function() {
+        var starCounts = [0, 0, 0, 0, 0];
+        var unrated = 0;
+        ordered.forEach(function(code) { var r = ratings[code]; if (r >= 1 && r <= 5) starCounts[r - 1]++; else unrated++; });
+        return React.createElement("div", {style: {display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16, alignItems: "center", justifyContent: "center"}},
+          [5, 4, 3, 2, 1].map(function(star) {
+            var count = starCounts[star - 1];
+            var isActive = reviewStarFilter === star;
+            return React.createElement("button", {key: star, onClick: function() { setReviewStarFilter(isActive ? null : star); }, style: {
+              padding: "5px 10px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer",
+              background: isActive ? "rgba(168,85,247,0.22)" : "transparent",
+              border: "1px solid " + (isActive ? "rgba(168,85,247,0.5)" : C.border),
+              color: isActive ? C.accent : C.txt2, display: "flex", alignItems: "center", gap: 4
+            }}, "★".repeat(star), React.createElement("span", {style: {color: isActive ? C.accent : C.txt3, fontWeight: 600}}, count));
+          }),
+          unrated > 0 && React.createElement("button", {onClick: function() { setReviewStarFilter(reviewStarFilter === 0 ? null : 0); }, style: {
+            padding: "5px 10px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer",
+            background: reviewStarFilter === 0 ? "rgba(168,85,247,0.22)" : "transparent",
+            border: "1px solid " + (reviewStarFilter === 0 ? "rgba(168,85,247,0.5)" : C.border),
+            color: reviewStarFilter === 0 ? C.accent : C.txt3
+          }}, "Unrated ", React.createElement("span", {style: {color: reviewStarFilter === 0 ? C.accent : C.txt3, fontWeight: 600}}, unrated))
+        );
+      }(),
+      ordered.length === 0 ? React.createElement("div", {
+        style: { textAlign: "center", color: C.txt3, fontSize: 15, padding: "46px 12px" }
+      }, "No past shows yet. Shows will appear here once their end time has passed.") :
+      reviewView === "tiles" ?
+        // TILE VIEW with drag-and-drop
+        React.createElement("div", {
+          style: { display: "grid", gridTemplateColumns: V ? "1fr" : "repeat(auto-fill, minmax(360px, 1fr))", gap: 10 },
+          onTouchMove: handleTouchMove,
+          onTouchEnd: handleTouchEnd
+        }, filteredOrdered.map(function(code, idx) {
+          var s = showMap[code];
+          if (!s) return null;
+          var r = ratings[code] || 0;
+          var isDragging = dragIdx === idx || touchDragIdx === idx;
+          var isOver = dragOverIdx === idx;
+          // Star rating builder for tiles
+          var tileStars = React.createElement("div", { style: { display: "flex", gap: 2 } },
+            [1,2,3,4,5].map(function(star) {
+              return React.createElement("span", {
+                key: star,
+                onClick: function(ev) { ev.stopPropagation(); var nr = {}; Object.keys(ratings).forEach(function(k){nr[k]=ratings[k];}); if (r === star) { delete nr[code]; } else { nr[code] = star; } setRatings(nr); },
+                style: { cursor: "pointer", fontSize: V ? 16 : 14, color: star <= r ? "#FBBF24" : C.txt3, opacity: star <= r ? 1 : 0.4, transition: "color 0.15s" }
+              }, "★");
+            })
+          );
+          return React.createElement("div", {
+            key: code,
+            ref: function(el) { reviewTileRefsRef.current[idx] = el; },
+            draggable: !V,
+            onDragStart: V ? undefined : function(ev) { ev.dataTransfer.effectAllowed = "move"; setDragIdx(idx); },
+            onDragEnd: V ? undefined : function() { setDragIdx(null); setDragOverIdx(null); },
+            onDragOver: V ? undefined : function(ev) { ev.preventDefault(); ev.dataTransfer.dropEffect = "move"; setDragOverIdx(idx); },
+            onDrop: V ? undefined : function(ev) { ev.preventDefault(); if (dragIdx != null) moveItem(dragIdx, idx); setDragIdx(null); setDragOverIdx(null); },
+            style: {
+              display: "flex", alignItems: "center", gap: V ? 8 : 12,
+              padding: "12px 14px", borderRadius: 12,
+              background: isOver ? "rgba(168,85,247,0.15)" : C.card,
+              border: "1px solid " + (isOver ? "rgba(168,85,247,0.5)" : isDragging ? "rgba(168,85,247,0.3)" : C.border),
+              opacity: isDragging ? 0.5 : 1,
+              cursor: V ? "default" : "grab", userSelect: "none",
+              transition: "border-color 0.15s, background 0.15s"
+            }
+          },
+            V ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 } },
+              React.createElement("button", {
+                onClick: function() { if (idx > 0) moveItem(idx, idx - 1); },
+                disabled: idx === 0,
+                style: { border: "none", background: "transparent", color: idx === 0 ? C.txt3 + "44" : C.accent, fontSize: 14, cursor: idx === 0 ? "default" : "pointer", padding: "2px 6px", lineHeight: 1 }
+              }, "▲"),
+              React.createElement("span", { style: { fontSize: 10, fontWeight: 900, color: C.txt3, textAlign: "center" } }, "#" + (idx + 1)),
+              React.createElement("button", {
+                onClick: function() { if (idx < ordered.length - 1) moveItem(idx, idx + 1); },
+                disabled: idx === ordered.length - 1,
+                style: { border: "none", background: "transparent", color: idx === ordered.length - 1 ? C.txt3 + "44" : C.accent, fontSize: 14, cursor: idx === ordered.length - 1 ? "default" : "pointer", padding: "2px 6px", lineHeight: 1 }
+              }, "▼")
+            ) : React.createElement(React.Fragment, null,
+              React.createElement("span", { style: { fontSize: 11, fontWeight: 900, color: C.txt3, minWidth: 20, textAlign: "center", flexShrink: 0 } }, "#" + (idx + 1)),
+              React.createElement("div", { style: { display: "flex", alignItems: "center", fontSize: 16, color: C.txt3, cursor: "grab", flexShrink: 0 } }, "⠿")
+            ),
+            React.createElement("div", {
+              onClick: function() { de(s); },
+              style: { flex: 1, minWidth: 0, cursor: "pointer" }
+            },
+              React.createElement("div", { style: { fontSize: V ? 13 : 14, fontWeight: 800, color: C.txt, wordBreak: "break-word" } }, s.title),
+              React.createElement("div", { style: { fontSize: V ? 11 : 12, color: C.txt3, wordBreak: "break-word" } }, s.artist || "")
+            ),
+            React.createElement("div", { style: { flexShrink: 0, textAlign: "right" } },
+              tileStars
+            )
+          );
+        })) :
+        // TABLE VIEW
+        React.createElement("div", { style: { overflowX: "auto" } },
+          React.createElement("table", {
+            style: { width: "100%", borderCollapse: "separate", borderSpacing: 0, fontSize: V ? 12 : 14 }
+          },
+            React.createElement("thead", null,
+              React.createElement("tr", null,
+                React.createElement("th", { style: { padding: "10px 8px", textAlign: "left", fontSize: 11, fontWeight: 800, color: C.txt3, textTransform: "uppercase", letterSpacing: 0.5, borderBottom: "2px solid " + C.border, width: 60 } }, "Rank"),
+                React.createElement("th", { style: { padding: "10px 8px", textAlign: "left", fontSize: 11, fontWeight: 800, color: C.txt3, textTransform: "uppercase", letterSpacing: 0.5, borderBottom: "2px solid " + C.border } }, "Show"),
+                React.createElement("th", { style: { padding: "10px 8px", textAlign: "left", fontSize: 11, fontWeight: 800, color: C.txt3, textTransform: "uppercase", letterSpacing: 0.5, borderBottom: "2px solid " + C.border } }, "Artist"),
+                React.createElement("th", { style: { padding: "10px 8px", textAlign: "center", fontSize: 11, fontWeight: 800, color: C.txt3, textTransform: "uppercase", letterSpacing: 0.5, borderBottom: "2px solid " + C.border, width: 100 } }, "Rating")
+              )
+            ),
+            React.createElement("tbody", null,
+              filteredOrdered.map(function(code, idx) {
+                var s = showMap[code];
+                if (!s) return null;
+                var r = ratings[code] || 0;
+                return React.createElement("tr", {
+                  key: code,
+                  style: { borderBottom: "1px solid " + C.border }
+                },
+                  React.createElement("td", { style: { padding: "8px", borderBottom: "1px solid " + C.border, verticalAlign: "middle" } },
+                    React.createElement("input", {
+                      type: "number",
+                      min: 1,
+                      max: ordered.length,
+                      defaultValue: idx + 1,
+                      key: code + "-rank-" + idx,
+                      onBlur: function(ev) {
+                        var val = parseInt(ev.target.value, 10);
+                        if (!isNaN(val) && val >= 1 && val <= ordered.length) setRank(code, val);
+                      },
+                      onKeyDown: function(ev) {
+                        if (ev.key === "Enter") { ev.target.blur(); }
+                      },
+                      style: { width: 48, padding: "4px 6px", borderRadius: 6, border: "1px solid " + C.border, background: "transparent", color: C.txt, fontSize: 13, fontWeight: 700, textAlign: "center" }
+                    })
+                  ),
+                  React.createElement("td", {
+                    onClick: function() { de(s); },
+                    style: { padding: "8px", borderBottom: "1px solid " + C.border, fontWeight: 700, cursor: "pointer", color: C.txt, maxWidth: 200, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
+                  }, s.title),
+                  React.createElement("td", {
+                    style: { padding: "8px", borderBottom: "1px solid " + C.border, color: C.txt2, maxWidth: 160, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
+                  }, s.artist || "—"),
+                  React.createElement("td", {
+                    style: { padding: "8px", borderBottom: "1px solid " + C.border, textAlign: "center" }
+                  }, React.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 2 } },
+                    [1,2,3,4,5].map(function(star) {
+                      return React.createElement("span", {
+                        key: star,
+                        onClick: function() { var nr = {}; Object.keys(ratings).forEach(function(k){nr[k]=ratings[k];}); if (r === star) { delete nr[code]; } else { nr[code] = star; } setRatings(nr); },
+                        style: { cursor: "pointer", fontSize: 16, color: star <= r ? "#FBBF24" : C.txt3, opacity: star <= r ? 1 : 0.35, transition: "color 0.15s" }
+                      }, "★");
+                    })
+                  ))
+                );
+              })
+            )
+          )
+        )
+    );
   }(), Q === "planner" && React.createElement(PlannerView, {
     avail: zt,
     setAvail: fn,
@@ -7263,7 +7638,16 @@ function App() {
         fontWeight: 800,
         cursor: "pointer"
       }
-    }, compactCards ? "\u25A3 Compact" : "\u25A3 Compact"))), React.createElement("div", {
+    }, compactCards ? "\u25A3 Compact" : "\u25A3 Compact"),
+    Me.length > 1 && React.createElement("select", {
+      value: wishSort,
+      onChange: function(ev) { setWishSort(ev.target.value); },
+      "aria-label": "Sort wishlist",
+      style: { padding: "7px 10px", borderRadius: 8, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 12, fontWeight: 700, cursor: "pointer", outline: "none" }
+    }, React.createElement("option", { value: "added" }, "Sort: Date added"),
+      React.createElement("option", { value: "alpha" }, "Sort: Name A\u2013Z"),
+      React.createElement("option", { value: "time" }, "Sort: Show time"),
+      React.createElement("option", { value: "venue" }, "Sort: Venue")))), React.createElement("div", {
     style: {
       marginBottom: 14
     }
@@ -7942,7 +8326,9 @@ function App() {
                 borderRadius: 10,
                 background: shareMode && shareSel.has(shareKey) ? "rgba(168,85,247,0.12)" : C.card,
                 border: "1px solid " + (shareMode && shareSel.has(shareKey) ? "rgba(168,85,247,0.4)" : C.border),
-                borderLeft: "4px solid " + orgColor(m.s.venue)
+                borderLeft: "4px solid " + orgColor(m.s.venue),
+                overflow: "visible",
+                position: "relative"
               }
             }, React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, minWidth: 0, overflow: "hidden", flex: 1 } }, shareMode && React.createElement("input", {
               type: "checkbox",
@@ -8017,7 +8403,7 @@ function App() {
                   style: Object.assign({}, btnS, {fontSize: 15, color: ratings[m.code] ? "#FBBF24" : C.txt3, background: ratingPopup === m.code ? "rgba(251,191,36,0.15)" : "transparent", border: "1px solid " + (ratings[m.code] ? "rgba(251,191,36,0.4)" : C.border)})
                 }, ratings[m.code] ? "\u2605" : "\u2606", ratings[m.code] ? React.createElement("span", {style: {fontSize: 9, marginLeft: 1, fontWeight: 800}}, ratings[m.code]) : null),
                 ratingPopup === m.code && React.createElement("div", {
-                  style: {position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", marginTop: 4, background: C.card, border: "1px solid " + C.border, borderRadius: 10, padding: "4px 6px", display: "flex", gap: 1, zIndex: 100, boxShadow: "0 4px 16px rgba(0,0,0,0.4)"}
+                  style: {position: "absolute", bottom: "100%", left: "50%", transform: "translateX(-50%)", marginBottom: 4, background: C.card, border: "1px solid " + C.border, borderRadius: 10, padding: "4px 6px", display: "flex", gap: 1, zIndex: 100, boxShadow: "0 4px 16px rgba(0,0,0,0.4)"}
                 }, [1,2,3,4,5].map(function(star) {
                   return React.createElement("button", {
                     key: star,
@@ -9376,7 +9762,117 @@ function App() {
       fontWeight: 800,
       fontSize: 14
     }
-  }, "Show ", Xe.length.toLocaleString(), " shows"))), React.createElement("div", {
+  }, "Show ", Xe.length.toLocaleString(), " shows"))),
+
+  Q === "nextyear" && function() {
+    var nySearchLower = nySearch.toLowerCase().trim();
+    var nySet = {};
+    nextYearList.forEach(function(item) { nySet[item.code] = true; });
+    var matchedShows = nySearchLower.length >= 2 ? (n || []).filter(function(s) {
+      return !nySet[s.code] && ((s.artist || "").toLowerCase().indexOf(nySearchLower) >= 0 ||
+             (s.title || "").toLowerCase().indexOf(nySearchLower) >= 0);
+    }).slice(0, 20) : [];
+
+    var removeItem = function(code) {
+      setNextYearList(function(prev) { return prev.filter(function(x) { return x.code !== code; }); });
+    };
+    var addItem = function(s) {
+      if (nySet[s.code]) return;
+      setNextYearList(function(prev) { return prev.concat([{code: s.code, artist: s.artist || s.title, showTitle: s.title}]); });
+    };
+
+    var doExport = function() {
+      var data = JSON.stringify(nextYearList, null, 2);
+      var blob = new Blob([data], {type: "application/json"});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = "fringe-next-year.json"; a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    var doImport = function() {
+      var inp = document.createElement("input");
+      inp.type = "file"; inp.accept = ".json";
+      inp.onchange = function(ev) {
+        var file = ev.target.files[0]; if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            var imported = JSON.parse(e.target.result);
+            if (!Array.isArray(imported)) { alert("Invalid file format"); return; }
+            var merged = nextYearList.slice();
+            var existing = {};
+            merged.forEach(function(x) { existing[x.code || x.artist] = true; });
+            imported.forEach(function(x) {
+              var key = x.code || x.artist;
+              if (!existing[key]) { merged.push(x); existing[key] = true; }
+            });
+            setNextYearList(merged);
+          } catch(err) { alert("Could not read file: " + err.message); }
+        };
+        reader.readAsText(file);
+      };
+      inp.click();
+    };
+
+    return React.createElement(React.Fragment, null,
+      React.createElement("div", {style: {display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10}},
+        React.createElement("div", {style: {fontSize: V ? 18 : 22, fontWeight: 900, background: "linear-gradient(90deg,var(--pink),var(--accent))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent"}}, "\u{1F52E} Next Year"),
+        React.createElement("div", {style: {display: "flex", gap: 6}},
+          React.createElement("button", {onClick: doImport, style: {padding: "7px 14px", borderRadius: 10, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 12, fontWeight: 700, cursor: "pointer"}}, "\u{1F4E5} Import"),
+          nextYearList.length > 0 && React.createElement("button", {onClick: doExport, style: {padding: "7px 14px", borderRadius: 10, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 12, fontWeight: 700, cursor: "pointer"}}, "\u{1F4E4} Export")
+        )
+      ),
+      React.createElement("div", {style: {fontSize: 14, color: C.txt2, marginBottom: 16}}, "Add your favourites into a list, ready for next year!"),
+      React.createElement("div", {style: {marginBottom: 16}},
+        React.createElement("input", {
+          type: "text",
+          value: nySearch,
+          onChange: function(e) { setNySearch(e.target.value); },
+          placeholder: "Search by artist or show name…",
+          style: {width: "100%", boxSizing: "border-box", padding: "12px 14px", borderRadius: 12, border: "1px solid " + C.border, background: "rgba(255,255,255,0.06)", color: C.txt, fontSize: 14, outline: "none", fontFamily: "inherit"}
+        })
+      ),
+      nySearchLower.length >= 2 && React.createElement("div", {style: {marginBottom: 20, maxHeight: 300, overflowY: "auto", borderRadius: 12, border: "1px solid " + C.border}},
+        matchedShows.length === 0 ? React.createElement("div", {style: {padding: "16px", textAlign: "center", color: C.txt3, fontSize: 13}}, "No matches found") :
+        matchedShows.map(function(s) {
+          return React.createElement("div", {
+            key: s.code,
+            onClick: function() { addItem(s); },
+            style: {display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid " + C.border, cursor: "pointer"}
+          },
+            React.createElement("div", {style: {flex: 1, minWidth: 0}},
+              React.createElement("div", {style: {fontSize: 14, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}, s.artist || "Unknown artist"),
+              React.createElement("div", {style: {fontSize: 12, color: C.txt2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}, s.title)
+            ),
+            React.createElement("span", {style: {fontSize: 18, marginLeft: 8, flexShrink: 0, color: "var(--accent)"}}, "+")
+          );
+        })
+      ),
+      React.createElement("div", {style: {fontSize: 12, color: C.txt3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8}}, "\u{1F4CB} Your list (" + nextYearList.length + ")"),
+      nextYearList.length === 0 ? React.createElement("div", {style: {textAlign: "center", color: C.txt3, fontSize: 14, padding: "36px 12px"}}, "No artists added yet. Search above to start building your list for next year!") :
+      React.createElement("div", {style: {display: "flex", flexDirection: "column", gap: 6}},
+        nextYearList.map(function(item, idx) {
+          return React.createElement("div", {
+            key: item.code || idx,
+            style: {display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 12, border: "1px solid " + C.border, background: C.card}
+          },
+            React.createElement("div", {style: {flex: 1, minWidth: 0}},
+              React.createElement("div", {style: {fontSize: 14, fontWeight: 800}}, item.artist),
+              React.createElement("div", {style: {fontSize: 12, color: C.txt2}}, SITE_YEAR + " show: ", React.createElement("span", {style: {fontStyle: "italic"}}, item.showTitle))
+            ),
+            React.createElement("button", {
+              onClick: function() { removeItem(item.code); },
+              "aria-label": "Remove " + item.artist,
+              style: {width: 30, height: 30, borderRadius: 8, border: "1px solid " + C.border, background: "transparent", color: C.txt3, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0}
+            }, "✕")
+          );
+        })
+      )
+    );
+  }(),
+
+  React.createElement("div", {
     role: "contentinfo",
     style: {
       textAlign: "center",
@@ -9419,9 +9915,10 @@ function App() {
       display: "flex",
       gap: 0,
       padding: "9px 6px calc(9px + env(safe-area-inset-bottom))",
-      justifyContent: "space-evenly"
+      overflowX: "hidden",
+      overflowY: "hidden"
     }
-  }, pe("browse", "Browse", "\u{1F3AD}"), pe("booked", "Booked", "\u{1F3AB}"), pe("calendar", "Cal", "\u{1F4C5}"), pe("map", "Map", "\u{1F5FA}\uFE0F"), pe("planner", "Planner", "\u2728"), pe("plan", "Wishlist", "\u{1F49C}"), pe("proposals", "Pitch", "\u{1F4CB}"), pe("stats", "Stats", "\u{1F4CA}"), Q === "browse" && null), ["browse", "plan", "booked", "map"].includes(Q) && !un && React.createElement("button", {onClick: () => Ie(!0), "aria-label": "Filters", title: "Filters", style: {position: "fixed", right: 16, bottom: V ? "calc(92px + env(safe-area-inset-bottom))" : 26, zIndex: 500, width: 52, height: 52, borderRadius: 26, border: "none", cursor: "pointer", background: "linear-gradient(135deg,var(--pink),var(--accent))", color: "#fff", boxShadow: "0 6px 20px rgba(168,85,247,0.5)", display: "flex", alignItems: "center", justifyContent: "center"}}, React.createElement("svg", {width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "#fff", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round"}, React.createElement("path", {d: "M3 4h18l-7 8v6l-4 2v-8z"})), me && React.createElement("span", {style: {position: "absolute", top: 9, right: 9, width: 9, height: 9, borderRadius: 5, background: "#fff", border: "1px solid var(--accent)"}}))
+  }, pe("booked", "Booked", "\u{1F3AB}"), pe("browse", "Browse", "\u{1F3AD}"), pe("calendar", "Cal", "\u{1F4C5}"), pe("map", "Map", "\u{1F5FA}\uFE0F"), pe("nextyear", "Next Yr", "\u{1F52E}"), pe("proposals", "Pitch", "\u{1F4CB}"), pe("planner", "Planner", "\u2728"), pe("reviews", "Reviews", "\u2B50"), pe("stats", "Stats", "\u{1F4CA}"), pe("plan", "Wishlist", "\u{1F49C}"), Q === "browse" && null), ["browse", "plan", "booked", "map"].includes(Q) && !un && React.createElement("button", {onClick: () => Ie(!0), "aria-label": "Filters", title: "Filters", style: {position: "fixed", right: 16, bottom: V ? "calc(92px + env(safe-area-inset-bottom))" : 26, zIndex: 500, width: 52, height: 52, borderRadius: 26, border: "none", cursor: "pointer", background: "linear-gradient(135deg,var(--pink),var(--accent))", color: "#fff", boxShadow: "0 6px 20px rgba(168,85,247,0.5)", display: "flex", alignItems: "center", justifyContent: "center"}}, React.createElement("svg", {width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "#fff", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round"}, React.createElement("path", {d: "M3 4h18l-7 8v6l-4 2v-8z"})), me && React.createElement("span", {style: {position: "absolute", top: 9, right: 9, width: 9, height: 9, borderRadius: 5, background: "#fff", border: "1px solid var(--accent)"}}))
   ), document.getElementById("nav-portal")), !V && ["browse", "plan", "booked", "map"].includes(Q) && !un && ReactDOM.createPortal(React.createElement("button", {onClick: () => Ie(!0), "aria-label": "Filters", title: "Filters", style: {position: "fixed", right: 16, bottom: 26, zIndex: 500, width: 52, height: 52, borderRadius: 26, border: "none", cursor: "pointer", background: "linear-gradient(135deg,var(--pink),var(--accent))", color: "#fff", boxShadow: "0 6px 20px rgba(168,85,247,0.5)", display: "flex", alignItems: "center", justifyContent: "center"}}, React.createElement("svg", {width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "#fff", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round"}, React.createElement("path", {d: "M3 4h18l-7 8v6l-4 2v-8z"})), me && React.createElement("span", {style: {position: "absolute", top: 9, right: 9, width: 9, height: 9, borderRadius: 5, background: "#fff", border: "1px solid var(--accent)"}})), document.getElementById("nav-portal")), toastMsg && React.createElement("div", {
     style: { position: "fixed", bottom: V ? "calc(70px + env(safe-area-inset-bottom))" : 30, left: "50%", transform: "translateX(-50%)", zIndex: 10000, background: "linear-gradient(135deg, var(--pink), var(--accent))", color: "#fff", padding: "10px 22px", borderRadius: 12, fontSize: 14, fontWeight: 700, boxShadow: "0 6px 24px rgba(168,85,247,0.4)", pointerEvents: "none", animation: "fadeInUp 0.3s ease" }
   }, toastMsg), React.createElement("footer", {
