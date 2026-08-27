@@ -2996,7 +2996,8 @@ function Detail({
   onAddTicket: _onAddTicket,
   onRemoveTicket: _onRemoveTicket,
   favVenues: _favVenues,
-  onToggleFavVenue: _toggleFavVenue
+  onToggleFavVenue: _toggleFavVenue,
+  venueData: _venueData
 }) {
   var [ratingOpen, setRatingOpen] = useState(false);
   var [compEdit, setCompEdit] = useState(false);
@@ -3453,21 +3454,42 @@ function Detail({
           }, expandedBkIdx === bi ? "\u25B2" : "\u25BC"))),
       (bkList.length <= 1 || expandedBkIdx === bi) && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, marginTop: 4 } },
         React.createElement("span", { style: { fontSize: 11, color: C.txt3 } }, "\u{1F4CD}"),
-        React.createElement("input", {
-          type: "text",
-          value: bk.venue != null ? bk.venue : "",
-          onChange: function(ev) { updateBk && updateBk(t.code, bi, { venue: ev.target.value || null }); },
-          placeholder: venueLabel_(t) + (t.venueCode ? " (#" + t.venueCode + ")" : ""),
-          "aria-label": "Venue override for this booking",
-          title: "Override venue for this date (leave blank to use default)",
-          style: { flex: 1, padding: "4px 6px", borderRadius: 6, border: "1px solid " + (bk.venue ? "rgba(251,191,36,0.4)" : C.border), background: bk.venue ? "rgba(251,191,36,0.08)" : "rgba(255,255,255,0.06)", color: C.txt, fontSize: 11, outline: "none" }
-        }),
+        React.createElement(React.Fragment, null,
+          React.createElement("input", {
+            type: "text",
+            list: "venue-ac-" + t.code + "-" + bi,
+            value: bk.venue != null ? bk.venue : "",
+            onChange: function(ev) { updateBk && updateBk(t.code, bi, { venue: ev.target.value || null }); },
+            placeholder: venueLabel_(t) + (t.venueCode ? " (#" + t.venueCode + ")" : ""),
+            "aria-label": "Venue override for this booking",
+            title: "Override venue for this date (leave blank to use default)",
+            style: { flex: 1, padding: "4px 6px", borderRadius: 6, border: "1px solid " + (bk.venue ? "rgba(251,191,36,0.4)" : C.border), background: bk.venue ? "rgba(251,191,36,0.08)" : "rgba(255,255,255,0.06)", color: C.txt, fontSize: 11, outline: "none" }
+          }),
+          _venueData && _venueData.list && React.createElement("datalist", { id: "venue-ac-" + t.code + "-" + bi },
+            _venueData.list.map(function(vk) {
+              var vm = _venueData.meta[vk];
+              if (!vm) return null;
+              var label = [vm.name, vm.code ? "(#" + vm.code + ")" : "", vm.addr ? vm.addr.split(",")[0].trim() : "", vm.pc].filter(Boolean).join(", ");
+              return React.createElement("option", { key: vk, value: vm.name }, label);
+            }).filter(Boolean),
+            _venueData.list.reduce(function(acc, vk) {
+              var vm = _venueData.meta[vk];
+              if (vm && vm.spaces && vm.spaces.length > 0) {
+                vm.spaces.forEach(function(sp) {
+                  var label = [sp + " at " + vm.name, vm.code ? "(#" + vm.code + ")" : "", vm.addr ? vm.addr.split(",")[0].trim() : "", vm.pc].filter(Boolean).join(", ");
+                  acc.push(React.createElement("option", { key: vk + "-" + sp, value: sp + ", " + vm.name }, label));
+                });
+              }
+              return acc;
+            }, [])
+          )),
         bk.venue && React.createElement("button", {
           onClick: function() { updateBk && updateBk(t.code, bi, { venue: null }); },
           title: "Reset to default venue",
           style: { padding: "2px 6px", borderRadius: 6, border: "none", background: "rgba(239,68,68,0.18)", color: "#f87171", fontSize: 10, cursor: "pointer" }
         }, "✕")),
-      (bkList.length <= 1 || expandedBkIdx === bi) && React.createElement("div", { style: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4, marginTop: 6 } },
+      (bkList.length <= 1 || expandedBkIdx === bi) && React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px", marginTop: 6, alignItems: "start" } },
+        React.createElement("div", { style: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4 } },
         React.createElement("span", { style: { fontSize: 10, color: C.txt3, fontWeight: 700, textTransform: "uppercase", flexShrink: 0 } }, "With:"),
         (function() {
           var ppl = bk.companions ? bk.companions.split(",").map(function(s) { return s.trim(); }).filter(Boolean) : [];
@@ -3517,7 +3539,7 @@ function Detail({
               (_allCompanions || []).filter(function(n) { return ppl.indexOf(n) < 0; }).map(function(n) { return React.createElement("option", { key: n, value: n }); })),
             ppl.length > 0 && React.createElement("div", { style: { width: "100%", fontSize: 9, color: C.txt3, marginTop: 2, fontStyle: "italic" } }, "\u2611 = you paid for their ticket"));
         })()),
-      (bkList.length <= 1 || expandedBkIdx === bi) && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, marginTop: 4 } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4 } },
         React.createElement("span", { style: { fontSize: 10, color: C.txt3, fontWeight: 700, textTransform: "uppercase", flexShrink: 0 } }, "Booker:"),
         (function() {
           var dlId2 = "bkr-dl-" + t.code + "-" + bi;
@@ -3537,7 +3559,7 @@ function Detail({
               onClick: function() { updateBk && updateBk(t.code, bi, { booker: null }); },
               style: { background: "none", border: "none", color: C.txt3, cursor: "pointer", fontSize: 8, padding: 0, lineHeight: 1 }
             }, "\u2715"));
-        })()),
+        })())),
       (bkList.length <= 1 || expandedBkIdx === bi) && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 4 } },
         React.createElement("label", {style: {display: "flex", alignItems: "center", gap: 4, cursor: "pointer", fontSize: 10, color: C.txt, fontWeight: 700}},
           React.createElement("input", {
@@ -4960,6 +4982,7 @@ function App() {
     [E, U] = useState("all"),
     [O, M] = useState("week"),
     [calOrient, setCalOrient] = useState(function(){ try { return localStorage.getItem("fringe-public-cal-orient") || "h"; } catch(e) { return "h"; } }),
+    [calZoom, setCalZoom] = useState(function(){ try { return parseInt(localStorage.getItem("fringe-cal-zoom")) || 0; } catch(e) { return 0; } }),
     [shareMode, setShareMode] = useState(false),
     [toastMsg, setToastMsg] = useState(null),
     [shareSel, setShareSel] = useState(new Set()),
@@ -5034,6 +5057,8 @@ function App() {
     [isOffline, setIsOffline] = useState(!navigator.onLine),
     [updateAvail, setUpdateAvail] = useState(false),
     [bkShowPast, setBkShowPast] = useState(false),
+    [bkHidePrices, setBkHidePrices] = useState(false),
+    [forYouOpen, setForYouOpen] = useState(true),
     [addShowOpen, setAddShowOpen] = useState(false),
     [exportMenuOpen, setExportMenuOpen] = useState(false),
     [shareMenuOpen, setShareMenuOpen] = useState(false),
@@ -5729,10 +5754,11 @@ function App() {
       var e = {};
       n.forEach(function(l) {
         var i = l.venueCode || l.venue;
-        i && (e[i] ? (!e[i].pc && l.venuePostcode && (e[i].pc = l.venuePostcode), l.space && e[i].spaces.indexOf(l.space) < 0 && e[i].spaces.push(l.space)) : e[i] = {
+        i && (e[i] ? (!e[i].pc && l.venuePostcode && (e[i].pc = l.venuePostcode), !e[i].addr && l.venueAddr && (e[i].addr = l.venueAddr), l.space && e[i].spaces.indexOf(l.space) < 0 && e[i].spaces.push(l.space)) : e[i] = {
           code: l.venueCode || "",
           name: l.venue || "",
           pc: l.venuePostcode || "",
+          addr: l.venueAddr || "",
           spaces: l.space ? [l.space] : []
         })
       });
@@ -8058,8 +8084,8 @@ function App() {
     return React.createElement("div", {
       style: { marginBottom: 14, padding: "10px 0" }
     },
-      React.createElement("div", { style: { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.txt3, marginBottom: 8, paddingLeft: 4 } }, "✨ For you"),
-      React.createElement("div", {
+      React.createElement("div", { onClick: function() { setForYouOpen(!forYouOpen); }, style: { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: C.txt3, marginBottom: forYouOpen ? 8 : 0, paddingLeft: 4, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, userSelect: "none" } }, "✨ For you", React.createElement("span", {style: {fontSize: 10, transition: "transform 0.2s", display: "inline-block", transform: forYouOpen ? "rotate(0deg)" : "rotate(-90deg)"}}, "▼")),
+      forYouOpen && React.createElement("div", {
         style: { display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6, WebkitOverflowScrolling: "touch" }
       }, scored.map(function(x) {
         var s = x.s;
@@ -8804,22 +8830,22 @@ function App() {
       style: { marginBottom: 12 }
     }, React.createElement("div", {
       style: { margin: 0, textAlign: V ? "center" : "left" }
-    }, React.createElement("p", {
+    }, React.createElement("div", {
+      style: V ? {} : { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "2px 16px" }
+    }, React.createElement("span", {
       style: {
-        fontSize: 15,
-        color: C.txt2,
-        margin: 0
+        fontSize: V ? 15 : 14,
+        color: C.txt2
       }
     }, "You have booked a total of ", React.createElement("b", {
       style: {
         color: C.txt,
         fontWeight: 800
       }
-    }, r.length), " show", r.length === 1 ? "" : "s", "."), React.createElement("p", {
+    }, r.length), " show", r.length === 1 ? "" : "s", "."), V && React.createElement("br"), React.createElement("span", {
       style: {
         fontSize: 14,
-        color: C.txt2,
-        margin: "4px 0 0"
+        color: C.txt2
       }
     }, "You have ", React.createElement("b", {
       style: {
@@ -8829,8 +8855,15 @@ function App() {
     }, upcomingCount), " show", upcomingCount === 1 ? "" : "s", " upcoming."), (function() {
       var ltfTotal = 0;
       Object.keys(p).forEach(function(code) { (p[code] || []).forEach(function(bk) { if (bk.ltf && bk.ltfTickets > 0) ltfTotal += bk.ltfTickets; }); });
-      return ltfTotal > 0 ? React.createElement("p", {style: {fontSize: 14, color: C.txt2, margin: "4px 0 0"}}, "You have used ", React.createElement("b", {style: {color: C.accent, fontWeight: 800}}, ltfTotal), " LTF ticket", ltfTotal === 1 ? "" : "s", ".") : null;
+      if (ltfTotal > 0) { if (V) return React.createElement(React.Fragment, null, React.createElement("br"), React.createElement("span", {style: {fontSize: 14, color: C.txt2}}, "You have used ", React.createElement("b", {style: {color: C.accent, fontWeight: 800}}, ltfTotal), " LTF ticket", ltfTotal === 1 ? "" : "s", ".")); return React.createElement("span", {style: {fontSize: 14, color: C.txt2}}, "You have used ", React.createElement("b", {style: {color: C.accent, fontWeight: 800}}, ltfTotal), " LTF ticket", ltfTotal === 1 ? "" : "s", "."); }
+      return null;
     }()),
+    React.createElement(V ? "div" : "span", { style: V ? { display: "flex", justifyContent: "center", marginTop: 8 } : { marginLeft: "auto" } },
+      React.createElement("button", {
+        onClick: function() { setBkHidePrices(!bkHidePrices); },
+        title: bkHidePrices ? "Show prices in overview" : "Hide prices from overview (useful for screenshots)",
+        style: { padding: "3px 10px", borderRadius: 8, border: "1px solid " + (!bkHidePrices ? "#34d399" : C.border), background: !bkHidePrices ? "rgba(52,211,153,0.15)" : "transparent", color: !bkHidePrices ? "#34d399" : C.txt3, fontSize: 11, fontWeight: 700, cursor: "pointer", verticalAlign: "middle" }
+      }, bkHidePrices ? "£ Prices Off" : "£ Prices On"))),
     // Budget tracker
     function() {
       var totalSpend = 0;
@@ -8841,7 +8874,7 @@ function App() {
       return React.createElement("div", {style: {marginTop: 10, padding: "10px 14px", borderRadius: 12, background: C.card, border: "1px solid " + C.border}},
         React.createElement("div", {style: {display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap"}},
           React.createElement("div", {style: {fontSize: 14, color: C.txt2}},
-            "\u{1F4B0} Spent: ", React.createElement("b", {style: {color: overBudget ? "#F87171" : "#34d399", fontWeight: 800, fontSize: 16}}, "\xA3" + totalSpend.toFixed(2)),
+            "\u{1F4B0} Spent: ", React.createElement("b", {style: {color: overBudget ? "#F87171" : "#34d399", fontWeight: 800, fontSize: 16}}, bkHidePrices ? "\xA3—" : "\xA3" + totalSpend.toFixed(2)),
             budgetCap > 0 && !budgetEditing ? React.createElement("span", {style: {color: C.txt3}}, " of \xA3" + budgetCap) : null
           ),
           !budgetEditing ? React.createElement("button", {
@@ -8882,7 +8915,7 @@ function App() {
         budgetCap > 0 && !budgetEditing && React.createElement("div", {style: {marginTop: 8, height: 8, borderRadius: 4, background: "rgba(255,255,255,0.08)", overflow: "hidden"}},
           React.createElement("div", {style: {height: "100%", width: pct + "%", borderRadius: 4, background: overBudget ? "linear-gradient(90deg,#F87171,#ef4444)" : "linear-gradient(90deg,#34d399,var(--accent))", transition: "width 0.3s"}})),
         budgetCap > 0 && !budgetEditing && React.createElement("div", {style: {fontSize: 11, color: overBudget ? "#F87171" : C.txt3, marginTop: 4, textAlign: "right"}},
-          overBudget ? "\xA3" + (totalSpend - budgetCap).toFixed(2) + " over budget" : "\xA3" + (budgetCap - totalSpend).toFixed(2) + " remaining")
+          bkHidePrices ? "" : (overBudget ? "\xA3" + (totalSpend - budgetCap).toFixed(2) + " over budget" : "\xA3" + (budgetCap - totalSpend).toFixed(2) + " remaining"))
       );
     }(),
     // Quick stats widget
@@ -8893,7 +8926,7 @@ function App() {
       r.forEach(function(u) { var g = u.s.genre || "Other"; genreCounts[g] = (genreCounts[g] || 0) + 1; });
       var topGenres = Object.keys(genreCounts).sort(function(a, b) { return genreCounts[b] - genreCounts[a]; });
       var uniqueVenues = {};
-      r.forEach(function(u) { if (u.s.venue) uniqueVenues[u.s.venue] = 1; });
+      r.forEach(function(u) { var vn = u.rec.venue || u.s.venue; if (vn) uniqueVenues[vn] = 1; });
       var totalMins = 0;
       r.forEach(function(u) {
         var dur = u.s.duration || 60;
@@ -8927,7 +8960,7 @@ function App() {
           style: { display: "flex", flexWrap: "wrap", gap: 0, justifyContent: "space-around" }
         },
           statBox("🎭", "Shows", r.length, C.accent),
-          statBox("💰", "Spent", "£" + totalSpend.toFixed(0), "#34d399"),
+          statBox("💰", "Spent", bkHidePrices ? "—" : "£" + totalSpend.toFixed(0), "#34d399"),
           statBox("📍", "Venues", Object.keys(uniqueVenues).length, "#f59e0b"),
           statBox("⏱️", "Hours", (totalMins / 60).toFixed(1), "#3b82f6"),
           avgRating > 0 ? statBox("⭐", "Avg rating", avgRating.toFixed(1), "#FBBF24") : statBox("⭐", "Avg rating", "—", C.txt3)
@@ -8948,7 +8981,7 @@ function App() {
       if (spendChartMode === "genre") {
         r.forEach(function(u) { var g = u.s.genre || "Other"; var pr = perfPrice_(u.s, u.rec) || 0; data[g] = (data[g] || 0) + pr; });
       } else if (spendChartMode === "venue") {
-        r.forEach(function(u) { var v = venueLabel_(u.s) || "Unknown"; var pr = perfPrice_(u.s, u.rec) || 0; data[v] = (data[v] || 0) + pr; });
+        r.forEach(function(u) { var v = u.rec.venue || venueLabel_(u.s) || "Unknown"; var pr = perfPrice_(u.s, u.rec) || 0; data[v] = (data[v] || 0) + pr; });
       } else {
         r.forEach(function(u) { var d = u.rec.date || "No date"; var pr = perfPrice_(u.s, u.rec) || 0; data[d] = (data[d] || 0) + pr; });
       }
@@ -8985,7 +9018,7 @@ function App() {
               return React.createElement("div", { key: e.label },
                 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 } },
                   React.createElement("span", { style: { color: C.txt2, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "65%" } }, spendChartMode === "day" ? function() { var d = new Date(e.label + "T12:00:00"); var days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]; return isNaN(d.getTime()) ? e.label : days[d.getDay()] + " " + d.getDate() + "/" + (d.getMonth()+1); }() : e.label),
-                  React.createElement("span", { style: { color: "#34d399", fontWeight: 800, flexShrink: 0 } }, "£" + e.val.toFixed(2))
+                  React.createElement("span", { style: { color: "#34d399", fontWeight: 800, flexShrink: 0 } }, bkHidePrices ? "" : "£" + e.val.toFixed(2))
                 ),
                 React.createElement("div", { style: { height: 6, borderRadius: 3, background: "rgba(255,255,255,0.06)", overflow: "hidden" } },
                   React.createElement("div", { style: { height: "100%", width: pct + "%", borderRadius: 3, background: "linear-gradient(90deg," + barColor + "," + barColor + "cc)", transition: "width 0.3s ease" } })
@@ -9000,7 +9033,7 @@ function App() {
     // Venue heatmap
     r.length > 0 && function() {
       var vCounts = {};
-      r.forEach(function(u) { var v = venueLabel_(u.s) || "Unknown"; vCounts[v] = (vCounts[v] || 0) + 1; });
+      r.forEach(function(u) { var v = u.rec.venue || venueLabel_(u.s) || "Unknown"; vCounts[v] = (vCounts[v] || 0) + 1; });
       var vKeys = Object.keys(vCounts).sort(function(a, b) { return vCounts[b] - vCounts[a]; });
       if (vKeys.length === 0) return null;
       var maxC = vCounts[vKeys[0]];
@@ -9158,7 +9191,7 @@ function App() {
               style: { fontSize: 14, fontWeight: 800, color: C.txt, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }
             }, upcoming.item.s.title),
             React.createElement("div", { style: { fontSize: 11, color: C.txt2, marginTop: 1 } },
-              (upcoming.item.rec.start || upcoming.item.s.startStr) + " · " + venueLabel_(upcoming.item.s)
+              (upcoming.item.rec.start || upcoming.item.s.startStr) + " · " + (upcoming.item.rec.venue || venueLabel_(upcoming.item.s))
             ),
             walkWarning && React.createElement("div", { style: { fontSize: 11, marginTop: 3, color: walkWarning.tight ? "#ef4444" : "#fbbf24", fontWeight: 700 } },
               walkWarning.tight ? "⚠️ " + walkWarning.walkTime + " min walk, only " + walkWarning.gap + " min gap!" : "🚶 " + walkWarning.walkTime + " min walk — " + walkWarning.gap + " min gap"
@@ -9194,7 +9227,7 @@ function App() {
           React.createElement("div", {style: {fontSize: 20, flexShrink: 0}}, label === "now" ? "\u{1F7E2}" : "⏳"),
           React.createElement("div", {style: {flex: 1, minWidth: 0}},
             React.createElement("div", {style: {fontSize: 13, fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}, u.s.title || u.s.artist),
-            React.createElement("div", {style: {fontSize: 11, color: C.txt2}}, st + (en ? "–" + en : "") + " · " + venueLabel_(u.s))
+            React.createElement("div", {style: {fontSize: 11, color: C.txt2}}, st + (en ? "–" + en : "") + " · " + (u.rec.venue || venueLabel_(u.s)))
           )
         );
       };
@@ -9266,7 +9299,7 @@ function App() {
       var totalHrs = Math.floor(totalMins / 60);
       var totalRem = totalMins % 60;
       var uniqueVenues = {};
-      todayItems.forEach(function(u) { if (u.s.venue) uniqueVenues[u.s.venue] = 1; });
+      todayItems.forEach(function(u) { var vn = u.rec.venue || u.s.venue; if (vn) uniqueVenues[vn] = 1; });
       var briefText = function() {
         var dn = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
         var td = new Date(nowStr + "T12:00:00");
@@ -9275,14 +9308,14 @@ function App() {
         todayItems.forEach(function(u, idx) {
           var st = u.rec.start || u.s.startStr || "?";
           var en = u.rec.end || u.s.endStr || "";
-          var line = st + (en ? "–" + en : "") + "  " + (u.s.title || "") + "\n    📍 " + venueLabel_(u.s);
+          var line = st + (en ? "–" + en : "") + "  " + (u.s.title || "") + "\n    📍 " + (u.rec.venue || venueLabel_(u.s));
           var pr = perfPrice_(u.s, u.rec);
           if (pr > 0) line += "  ·  £" + pr.toFixed(2);
           if (idx > 0) {
             var prevEnd = timeToMin_(todayItems[idx-1].rec.end || todayItems[idx-1].s.endStr);
             if (prevEnd == null) { var pst = timeToMin_(todayItems[idx-1].rec.start || todayItems[idx-1].s.startStr); if (pst != null) prevEnd = pst + (todayItems[idx-1].s.duration || 60); }
             var curSt = timeToMin_(u.rec.start || u.s.startStr);
-            if (prevEnd != null && curSt != null && venueLabel_(todayItems[idx-1].s) !== venueLabel_(u.s)) {
+            if (prevEnd != null && curSt != null && (todayItems[idx-1].rec.venue || venueLabel_(todayItems[idx-1].s)) !== (u.rec.venue || venueLabel_(u.s))) {
               var wm = walkMin_(todayItems[idx-1].s, u.s);
               if (wm != null && wm > 0) {
                 var gap = curSt - prevEnd;
@@ -9290,10 +9323,10 @@ function App() {
               }
             }
           }
-          if (u.s.venue && venueNotes[u.s.venue]) line += "\n    📝 " + venueNotes[u.s.venue].trim();
+          var _vnKey = u.rec.venue || u.s.venue; if (_vnKey && venueNotes[_vnKey]) line += "\n    📝 " + venueNotes[_vnKey].trim();
           lines.push(line);
         });
-        var footer = "\n📊 " + todayItems.length + " shows · " + Object.keys(uniqueVenues).length + " venues · " + (totalHrs > 0 ? totalHrs + "h " : "") + totalRem + "m · £" + todaySpend.toFixed(2);
+        var footer = "\n📊 " + todayItems.length + " shows · " + Object.keys(uniqueVenues).length + " venues · " + (totalHrs > 0 ? totalHrs + "h " : "") + totalRem + "m" + (bkHidePrices ? "" : " · £" + todaySpend.toFixed(2));
         return hdr + lines.join("\n\n") + footer;
       };
       return React.createElement("div", {style: {marginTop: 10, padding: "12px 14px", borderRadius: 12, background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.2)"}},
@@ -9312,7 +9345,7 @@ function App() {
           todayItems.length + " show" + (todayItems.length === 1 ? "" : "s") + " today",
           " · ", Object.keys(uniqueVenues).length, " venue" + (Object.keys(uniqueVenues).length === 1 ? "" : "s"),
           " · ", (totalHrs > 0 ? totalHrs + "h " : "") + totalRem + "m",
-          todaySpend > 0 ? " · £" + todaySpend.toFixed(2) : ""
+          !bkHidePrices && todaySpend > 0 ? " · £" + todaySpend.toFixed(2) : ""
         )
       );
     }(),
@@ -9493,7 +9526,7 @@ function App() {
         var pr = totalBookingCost_(u.s, u.rec) || 0;
         totalSpend += pr;
         if (u.s.genre) genreCounts[u.s.genre] = (genreCounts[u.s.genre] || 0) + 1;
-        if (u.s.venue) venueCounts[venueLabel_(u.s)] = (venueCounts[venueLabel_(u.s)] || 0) + 1;
+        var _vl5 = u.rec.venue || venueLabel_(u.s); if (_vl5) venueCounts[_vl5] = (venueCounts[_vl5] || 0) + 1;
         totalMins += u.s.duration || 60;
       });
       var topGenre = Object.keys(genreCounts).sort(function(a,b) { return genreCounts[b] - genreCounts[a]; })[0] || "—";
@@ -9548,7 +9581,7 @@ function App() {
     function() {
       var bookedCount = Object.keys(p).filter(function(c) { return p[c] && p[c].length > 0; }).length;
       var uniqueVenuesAll = {};
-      Object.keys(p).forEach(function(c) { var s = e[c]; if (s && s.venue) uniqueVenuesAll[s.venue] = 1; });
+      Object.keys(p).forEach(function(c) { var s = e[c]; if (s) { var recs = p[c] || []; var vn = (recs[0] && recs[0].venue) || s.venue; if (vn) uniqueVenuesAll[vn] = 1; } });
       var venueCount = Object.keys(uniqueVenuesAll).length;
       var genresAll = {};
       Object.keys(p).forEach(function(c) { var s = e[c]; if (s && s.genre) genresAll[s.genre] = 1; });
@@ -9828,7 +9861,7 @@ function App() {
                   totalBookingCost_(s, rec) || "",
                   '"' + (s.genre || "").replace(/"/g, '""') + '"',
                   '"' + (s.tags || []).join(", ").replace(/"/g, '""') + '"',
-                  '"' + (venueLabel_(s)).replace(/"/g, '""') + '"',
+                  '"' + (rec.venue || venueLabel_(s)).replace(/"/g, '""') + '"',
                   '"' + ([s.venueAddr, s.venuePostcode].filter(Boolean).join(", ")).replace(/"/g, '""') + '"',
                   r ? r + "/5" : "",
                   '"' + note.replace(/"/g, '""') + '"',
@@ -9909,7 +9942,7 @@ function App() {
             todayItems.forEach(function(u) {
               var st = u.rec.start || u.s.startStr || "?";
               var en = u.rec.end || u.s.endStr || "";
-              lines.push(st + (en ? "\u2013" + en : "") + "  " + (u.s.title || u.s.artist) + "  @ " + venueLabel_(u.s));
+              lines.push(st + (en ? "\u2013" + en : "") + "  " + (u.s.title || u.s.artist) + "  @ " + (u.rec.venue || venueLabel_(u.s)));
             });
             lines.push("\n" + todayItems.length + " show" + (todayItems.length === 1 ? "" : "s") + " today \u{1F389}");
             var text = lines.join("\n");
@@ -10148,7 +10181,7 @@ function App() {
                   },
                     React.createElement("span", { style: { color: C.txt2, fontWeight: 700, flexShrink: 0, minWidth: 70 } }, (u.rec.start || u.s.startStr || "?") + "–" + (u.rec.end || u.s.endStr || "?")),
                     React.createElement("span", { style: { fontWeight: 600, color: C.txt, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, u.s.title),
-                    React.createElement("span", { style: { fontSize: 10, color: C.txt3, flexShrink: 0 } }, venueLabel_(u.s))
+                    React.createElement("span", { style: { fontSize: 10, color: C.txt3, flexShrink: 0 } }, u.rec.venue || venueLabel_(u.s))
                   );
                 })
               );
@@ -10366,7 +10399,7 @@ function App() {
               return React.createElement("div", {
                 key: it.code + idx,
                 onClick: function() { de(it.s); },
-                title: it.s.title + " · " + (it.rec.start || it.s.startStr) + "–" + (it.rec.end || it.s.endStr) + " · " + venueLabel_(it.s),
+                title: it.s.title + " · " + (it.rec.start || it.s.startStr) + "–" + (it.rec.end || it.s.endStr) + " · " + (it.rec.venue || venueLabel_(it.s)),
                 style: {
                   position: "absolute", left: left + "%", width: w + "%", top: top, height: laneH, borderRadius: 6,
                   background: col, opacity: 0.85, cursor: "pointer", overflow: "hidden", display: "flex", alignItems: "center", paddingLeft: 6, paddingRight: 4, boxSizing: "border-box",
@@ -10914,7 +10947,7 @@ function App() {
         }
       })
     });
-    var ze = V ? 120 : 100,
+    var ze = V ? 120 : [100, 140, 180][calZoom || 0],
       le, je;
     // Always span the full day (6am to 4am next day) so calendar shows everything
     le = 360; je = 1680;
@@ -10939,7 +10972,7 @@ function App() {
         var targetMin = Math.max(le, Math.min(nowMin - 30, je));
         function doScroll() {
           if (calOrient === "v") {
-            var pxPerMin = 60 / 30;
+            var pxPerMin = [60, 80, 100][calZoom || 0] / 30;
             el.scrollLeft = Math.max(0, (targetMin - le) * pxPerMin);
           } else {
             var pxPerMin2 = ze / 60;
@@ -11054,7 +11087,7 @@ function App() {
         border: "1px solid " + C.border,
         overflow: "hidden"
       }
-    }, c("week", "Week"), c("day", "Day")), React.createElement("div", {style: {display: "inline-flex", borderRadius: 8, border: "1px solid " + C.border, overflow: "hidden"}}, React.createElement("button", {onClick: function() { setCalOrient("h"); try { localStorage.setItem("fringe-public-cal-orient", "h"); } catch(e) {} }, style: {padding: "6px 12px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: calOrient === "h" ? C.accent : "transparent", color: calOrient === "h" ? "#fff" : C.txt2}}, "\u2550"), React.createElement("button", {onClick: function() { setCalOrient("v"); try { localStorage.setItem("fringe-public-cal-orient", "v"); } catch(e) {} }, style: {padding: "6px 12px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: calOrient === "v" ? C.accent : "transparent", color: calOrient === "v" ? "#fff" : C.txt2}}, "\u2551")), React.createElement("div", {
+    }, c("week", "Week"), c("day", "Day")), !V && React.createElement("button", {onClick: function() { var nz = (calZoom + 1) % 3; setCalZoom(nz); try { localStorage.setItem("fringe-cal-zoom", String(nz)); } catch(e) {} }, title: ["Normal size", "Large text", "Extra large text"][calZoom], style: {padding: "6px 10px", borderRadius: 8, border: "1px solid " + (calZoom > 0 ? C.accent : C.border), background: calZoom > 0 ? "rgba(168,85,247,0.15)" : "transparent", color: calZoom > 0 ? C.accent : C.txt2, fontSize: 12, fontWeight: 700, cursor: "pointer"}}, ["A\u2082", "A\u2081", "A\u207A"][calZoom]), React.createElement("div", {style: {display: "inline-flex", borderRadius: 8, border: "1px solid " + C.border, overflow: "hidden"}}, React.createElement("button", {onClick: function() { setCalOrient("h"); try { localStorage.setItem("fringe-public-cal-orient", "h"); } catch(e) {} }, style: {padding: "6px 12px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: calOrient === "h" ? C.accent : "transparent", color: calOrient === "h" ? "#fff" : C.txt2}}, "\u2550"), React.createElement("button", {onClick: function() { setCalOrient("v"); try { localStorage.setItem("fringe-public-cal-orient", "v"); } catch(e) {} }, style: {padding: "6px 12px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: calOrient === "v" ? C.accent : "transparent", color: calOrient === "v" ? "#fff" : C.txt2}}, "\u2551")), React.createElement("div", {
       style: {
         display: "inline-flex",
         borderRadius: 8,
@@ -11073,13 +11106,13 @@ function App() {
       }
     }, React.createElement("div", {
       style: {
-        minWidth: (ce + 1) * 60 + 60,
+        minWidth: (ce + 1) * [60, 80, 100][calZoom || 0] + 60,
         position: "relative"
       }
     }, React.createElement("div", {
       style: {
         display: "grid",
-        gridTemplateColumns: "60px repeat(" + (ce + 1) + ", 60px)",
+        gridTemplateColumns: "60px repeat(" + (ce + 1) + ", " + [60, 80, 100][calZoom || 0] + "px)",
         position: "sticky",
         top: 0,
         zIndex: 20,
@@ -11116,9 +11149,9 @@ function App() {
         key: F,
         style: {
           display: "grid",
-          gridTemplateColumns: "60px repeat(" + (ce + 1) + ", 60px)",
+          gridTemplateColumns: "60px repeat(" + (ce + 1) + ", " + [60, 80, 100][calZoom || 0] + "px)",
           position: "relative",
-          height: 70,
+          height: [70, 90, 110][calZoom || 0],
           borderBottom: "1px solid " + C.border,
           background: Z ? "rgba(168,85,247,0.05)" : "transparent"
         }
@@ -11146,14 +11179,14 @@ function App() {
         style: {
           gridColumn: "2 / -1",
           position: "relative",
-          height: 70
+          height: [70, 90, 110][calZoom || 0]
         }
       }, Array.from({length: ce}).map(function(N, ie) {
         return React.createElement("div", {
           key: ie,
           style: {
             position: "absolute",
-            left: ie * 60,
+            left: ie * [60, 80, 100][calZoom || 0],
             top: 0,
             bottom: 0,
             width: 1,
@@ -11165,8 +11198,8 @@ function App() {
         if (rt == null) return null;
         var St = ve(N.endStr);
         (St == null || St <= rt) && (St = rt + (N.duration || 60));
-        var leftPos = (rt - le) / 30 * 60,
-          widthPx = Math.max(40, (St - rt) / 30 * 60 - 2),
+        var leftPos = (rt - le) / 30 * [60, 80, 100][calZoom || 0],
+          widthPx = Math.max(40, (St - rt) / 30 * [60, 80, 100][calZoom || 0] - 2),
           sn = orgColor(N.venue);
         return React.createElement("div", {
           key: ie,
@@ -11193,11 +11226,11 @@ function App() {
             justifyContent: "center"
           }
         }, React.createElement("div", {
-          style: { fontWeight: 700, fontSize: 11, lineHeight: 1.2, textShadow: N.wish ? "none" : "0 1px 2px rgba(0,0,0,0.35)", overflow: "hidden", wordBreak: "break-word" }
+          style: { fontWeight: 700, fontSize: [11, 14, 17][calZoom || 0], lineHeight: 1.2, textShadow: N.wish ? "none" : "0 1px 2px rgba(0,0,0,0.35)", overflow: "hidden", wordBreak: "break-word" }
         }, N.title), N.artist && React.createElement("div", {
-          style: { fontSize: 9, opacity: .8, overflow: "hidden", wordBreak: "break-word" }
+          style: { fontSize: [9, 12, 15][calZoom || 0], opacity: .8, overflow: "hidden", wordBreak: "break-word" }
         }, N.artist), N.venue && React.createElement("div", {
-          style: { fontSize: 9, opacity: .92, marginTop: 1, overflow: "hidden", wordBreak: "break-word" }
+          style: { fontSize: [9, 12, 15][calZoom || 0], opacity: .92, marginTop: 1, overflow: "hidden", wordBreak: "break-word" }
         }, "\u{1F4CD} ", venueLabel_(N)))
       }),
       // Now time indicator line (vertical/horizontal-scroll calendar)
@@ -11206,7 +11239,7 @@ function App() {
         var _nm = _now.getHours() * 60 + _now.getMinutes();
         if (_nm < 300) _nm += 1440;
         if (_nm < le || _nm > je) return null;
-        var _left = (_nm - le) / 30 * 60;
+        var _left = (_nm - le) / 30 * [60, 80, 100][calZoom || 0];
         return React.createElement("div", {key: "now-line-v", style: {position: "absolute", left: _left, top: 0, bottom: 0, width: 2, background: "#F87171", zIndex: 15, borderRadius: 1, boxShadow: "0 0 6px rgba(248,113,113,0.5)"}},
           React.createElement("div", {style: {position: "absolute", top: -4, left: -3, width: 8, height: 8, borderRadius: 4, background: "#F87171"}}));
       }())
@@ -11373,13 +11406,13 @@ function App() {
         }, React.createElement("div", {
           style: {
             fontWeight: 700,
-            fontSize: 12,
+            fontSize: [12, 15, 18][calZoom || 0],
             lineHeight: 1.2,
             textShadow: N.wish ? "none" : "0 1px 2px rgba(0,0,0,0.35)"
           }
         }, N.title), N.artist && React.createElement("div", {
           style: {
-            fontSize: 10,
+            fontSize: [10, 13, 16][calZoom || 0],
             opacity: .8,
             lineHeight: 1.2,
             overflow: "hidden",
@@ -11387,7 +11420,7 @@ function App() {
           }
         }, N.artist), N.venue && React.createElement("div", {
           style: {
-            fontSize: 10,
+            fontSize: [10, 13, 16][calZoom || 0],
             opacity: .92,
             marginTop: 1,
             overflow: "hidden",
@@ -12387,7 +12420,8 @@ function App() {
     onAddTicket: function(code, dataUrl) { setShowTickets(function(prev) { var next = Object.assign({}, prev); next[code] = (next[code] || []).concat([dataUrl]); return next; }); },
     onRemoveTicket: function(code, idx) { setShowTickets(function(prev) { var next = Object.assign({}, prev); var arr = (next[code] || []).slice(); arr.splice(idx, 1); if (arr.length) next[code] = arr; else delete next[code]; return next; }); },
     favVenues: favVenues,
-    onToggleFavVenue: toggleFavVenue
+    onToggleFavVenue: toggleFavVenue,
+    venueData: rn
   }), photoGallery && showPhotos[photoGallery.code] && showPhotos[photoGallery.code].length > 0 && React.createElement("div", {
     onClick: function(ev) { if (ev.target === ev.currentTarget) setPhotoGallery(null); },
     style: {
