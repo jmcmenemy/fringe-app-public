@@ -1,7 +1,7 @@
 // Fringe Planner Service Worker — cache-first with background update
 // IMPORTANT: bump the version number below every time you deploy new files.
 // This triggers the browser to install the new service worker and clear the old cache.
-var CACHE = "fringe-v39";
+var CACHE = "fringe-v80";
 var ASSETS = ["/", "/index.html", "/app.source.js"];
 
 // Install: pre-cache the shell
