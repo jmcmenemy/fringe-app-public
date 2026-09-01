@@ -26,7 +26,7 @@ const {
   Events: "#64748b"
 };
 var THEME = "dark";
-const gcolor = t => THEME === "nocolor" ? "#7c789a" : GENRE_COLOR[t] || "#64748b";
+const gcolor = t => THEME === "lightbw" ? "#4a4a56" : THEME === "nocolor" ? "#7c789a" : GENRE_COLOR[t] || "#64748b";
 var TAG_PALETTE = ["#f472b6","#ffba08","#a855f7","#22c55e","#f97316","#3b82f6","#14b8a6","#eab308","#e11d48","#8b5cf6","#ec4899","#10b981","#d97706","#0ea5e9","#ef4444","#06b6d4","#84cc16","#f59e0b"];
 var _tagColorCache = {};
 var _genreColorsUsed = Object.values(GENRE_COLOR);
@@ -530,7 +530,8 @@ function ThemeToggleCollapsible({
     d = {
       dark: "\u{1F319}",
       light: "\u2600\uFE0F",
-      nocolor: "\u25D1"
+      nocolor: "\u25D1",
+      lightbw: "\u26AA"
     } [t] || "\u{1F319}",
     w = function(p, h, b) {
       return React.createElement("button", {
@@ -558,7 +559,7 @@ function ThemeToggleCollapsible({
       overflow: "hidden",
       flexShrink: 0
     }
-  }, w("dark", "\u{1F319}", "Dark"), w("light", "\u2600\uFE0F", "Light"), w("nocolor", "\u25D1", "No colour")) : React.createElement("button", {
+  }, w("dark", "\u{1F319}", "Dark"), w("light", "\u2600\uFE0F", "Light"), w("nocolor", "\u25D1", "B&W"), w("lightbw", "\u26AA", "Light B&W")) : React.createElement("button", {
     onClick: function() {
       s(!0)
     },
@@ -1027,6 +1028,7 @@ var ORG_COLORS = {
 };
 
 function orgColor(t) {
+  if (THEME === "lightbw") return "#4a4a56";
   if (THEME === "nocolor") return "#7c789a";
   for (var n = (t || "").toLowerCase(), o = Object.keys(ORG_COLORS), a = 0; a < o.length; a++)
     if (o[a] !== "Other" && n.indexOf(o[a].toLowerCase()) >= 0) return ORG_COLORS[o[a]];
@@ -2478,7 +2480,7 @@ function PlannerView({
       background: "rgba(255,255,255,0.06)",
       color: C.txt,
       fontSize: 14,
-      colorScheme: THEME === "light" ? "light" : "dark",
+      colorScheme: (THEME === "light" || THEME === "lightbw") ? "light" : "dark",
       outline: "none"
     },
     tt = {
@@ -3156,7 +3158,7 @@ function Detail({
       color: C.txt2,
       fontSize: 18,
       fontWeight: 700,
-      colorScheme: THEME === "light" ? "light" : "dark",
+      colorScheme: (THEME === "light" || THEME === "lightbw") ? "light" : "dark",
       cursor: "pointer",
       textAlign: "center",
       textAlignLast: "center",
@@ -3442,6 +3444,13 @@ function Detail({
             title: "Change date/time",
             style: { padding: "4px 8px", borderRadius: 8, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60a5fa", fontWeight: 700, fontSize: 12, cursor: "pointer" }
           }, "✎"),
+          React.createElement("label", {style: {display: "flex", alignItems: "center", gap: 2, cursor: "pointer", fontSize: 9, color: bk.ltf ? "#34d399" : C.txt3, fontWeight: 700, padding: "3px 6px", borderRadius: 6, border: "1px solid " + (bk.ltf ? "rgba(52,211,153,0.3)" : C.border), background: bk.ltf ? "rgba(52,211,153,0.1)" : "transparent"}},
+            React.createElement("input", {
+              type: "checkbox",
+              checked: !!bk.ltf,
+              onChange: function(ev) { updateBk && updateBk(t.code, bi, { ltf: ev.target.checked, ltfTickets: bk.ltfTickets || 0 }); },
+              style: {width: 11, height: 11, accentColor: "#34d399", cursor: "pointer", margin: 0}
+            }), "LTF"),
           React.createElement("button", {
             onClick: function() { if (window.confirm("Remove this booking" + (bk.date ? " on " + bk.date : "") + "?")) { removeB(t.code, bi); if (bkList.length <= 1) b(); } },
             "aria-label": "Remove booking on " + (bk.date || "this date"),
@@ -3488,13 +3497,20 @@ function Detail({
           title: "Reset to default venue",
           style: { padding: "2px 6px", borderRadius: 6, border: "none", background: "rgba(239,68,68,0.18)", color: "#f87171", fontSize: 10, cursor: "pointer" }
         }, "✕")),
-      (bkList.length <= 1 || expandedBkIdx === bi) && React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px", marginTop: 6, alignItems: "start" } },
+      (bkList.length <= 1 || expandedBkIdx === bi) && React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, marginTop: 6 } },
         React.createElement("div", { style: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4 } },
         React.createElement("span", { style: { fontSize: 10, color: C.txt3, fontWeight: 700, textTransform: "uppercase", flexShrink: 0 } }, "With:"),
         (function() {
+          var meAttends = bk.meAttending !== false;
           var ppl = bk.companions ? bk.companions.split(",").map(function(s) { return s.trim(); }).filter(Boolean) : [];
           var dlId = "comp-dl-" + t.code + "-" + bi;
           return React.createElement(React.Fragment, null,
+            React.createElement("span", {
+              key: "_me",
+              onClick: function() { updateBk && updateBk(t.code, bi, { meAttending: !meAttends }); },
+              title: meAttends ? "You are attending — click to remove yourself" : "You are not attending — click to add yourself",
+              style: { display: "inline-flex", alignItems: "center", gap: 3, background: meAttends ? "rgba(96,165,250,0.18)" : "rgba(255,255,255,0.06)", borderRadius: 10, padding: "2px 8px 2px 5px", fontSize: 10, color: meAttends ? "#60a5fa" : C.txt3, fontWeight: 700, border: meAttends ? "1px solid rgba(96,165,250,0.35)" : "1px dashed " + C.border, cursor: "pointer", userSelect: "none", textDecoration: meAttends ? "none" : "line-through", opacity: meAttends ? 1 : 0.6 }
+            }, "👤", " Me"),
             ppl.map(function(nm, ni) {
               var paidList = bk.paidFor ? bk.paidFor.split(",").map(function(x) { return x.trim(); }) : [];
               var isPaid = paidList.indexOf(nm) >= 0;
@@ -3544,32 +3560,26 @@ function Detail({
         (function() {
           var dlId2 = "bkr-dl-" + t.code + "-" + bi;
           return React.createElement(React.Fragment, null,
+            React.createElement("span", { style: { fontSize: 12, flexShrink: 0 } }, "\ud83d\udc64"),
             React.createElement("input", {
               type: "text",
               list: dlId2,
-              value: bk.booker || "",
-              onChange: function(ev) { updateBk && updateBk(t.code, bi, { booker: ev.target.value || null }); },
-              placeholder: "\u2014",
-              style: { flex: 1, maxWidth: 120, padding: "2px 6px", borderRadius: 6, border: "1px solid " + C.border, background: "rgba(255,255,255,0.06)", color: C.txt, fontSize: 10, outline: "none" }
+              value: bk.booker != null ? bk.booker : "Me",
+              onFocus: function(ev) { if (ev.target.value === "Me") ev.target.select(); },
+              onChange: function(ev) { updateBk && updateBk(t.code, bi, { booker: ev.target.value }); },
+              placeholder: "Me",
+              style: { flex: 1, maxWidth: 110, padding: "2px 6px", borderRadius: 6, border: "1px solid " + C.border, background: "rgba(255,255,255,0.06)", color: C.txt, fontSize: 10, outline: "none" }
             }),
             React.createElement("datalist", { id: dlId2 },
-              React.createElement("option", { key: "_myself", value: "Myself" }),
-              (_allCompanions || []).filter(function(n) { return n !== "Myself"; }).map(function(n) { return React.createElement("option", { key: n, value: n }); })),
-            bk.booker && React.createElement("button", {
+              (_allCompanions || []).filter(function(n) { return n !== "Me"; }).map(function(n) { return React.createElement("option", { key: n, value: n }); })),
+            bk.booker && bk.booker !== "Me" && React.createElement("button", {
               onClick: function() { updateBk && updateBk(t.code, bi, { booker: null }); },
               style: { background: "none", border: "none", color: C.txt3, cursor: "pointer", fontSize: 8, padding: 0, lineHeight: 1 }
             }, "\u2715"));
         })())),
-      (bkList.length <= 1 || expandedBkIdx === bi) && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 4 } },
-        React.createElement("label", {style: {display: "flex", alignItems: "center", gap: 4, cursor: "pointer", fontSize: 10, color: C.txt, fontWeight: 700}},
-          React.createElement("input", {
-            type: "checkbox",
-            checked: !!bk.ltf,
-            onChange: function(ev) { updateBk && updateBk(t.code, bi, { ltf: ev.target.checked, ltfTickets: bk.ltfTickets || 0 }); },
-            style: {width: 14, height: 14, accentColor: C.accent, cursor: "pointer"}
-          }), "LTF?"),
-        bk.ltf && React.createElement("label", {style: {display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.txt2}},
-          "Tickets:",
+      (bkList.length <= 1 || expandedBkIdx === bi) && bk.ltf && React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 3 } },
+        React.createElement("label", {style: {display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.txt2}},
+          "LTF Tickets:",
           React.createElement("input", {
             type: "number",
             min: 0,
@@ -3601,7 +3611,7 @@ function Detail({
       background: "rgba(255,255,255,0.06)",
       color: C.txt,
       fontSize: 13,
-      colorScheme: THEME === "light" ? "light" : "dark"
+      colorScheme: (THEME === "light" || THEME === "lightbw") ? "light" : "dark"
     }
   })),
   // Momentos (photos + notes)
@@ -3705,7 +3715,7 @@ function BookModal({
       color: C.txt,
       fontSize: 14,
       outline: "none",
-      colorScheme: THEME === "light" ? "light" : "dark"
+      colorScheme: (THEME === "light" || THEME === "lightbw") ? "light" : "dark"
     };
   return React.createElement("div", {
     onClick: o,
@@ -4331,7 +4341,10 @@ function FilterControls({
   setSortDir: setSortDir,
   tagFilter: tagFilter,
   setTagFilter: setTagFilter,
-  allUserTags: allUserTags
+  allUserTags: allUserTags,
+  section: section,
+  orgFilter: orgFilter,
+  setOrgFilter: setOrgFilter
 }) {
   const ne = {
       padding: "9px 12px",
@@ -4340,7 +4353,7 @@ function FilterControls({
       background: "rgba(255,255,255,0.06)",
       color: C.txt,
       fontSize: 14,
-      colorScheme: THEME === "light" ? "light" : "dark",
+      colorScheme: (THEME === "light" || THEME === "lightbw") ? "light" : "dark",
       width: Y ? "100%" : void 0,
       minWidth: 0,
       boxSizing: "border-box"
@@ -4364,6 +4377,41 @@ function FilterControls({
       justifyContent: "center"
     }
   },
+  // Row 3: Sort by (full width) \u2014 dropdown + direction toggle
+  sortKey !== undefined && React.createElement("div", {
+    style: { ...pt, display: "flex", gap: 6 }
+  }, React.createElement("select", {
+    "aria-label": "Sort by",
+    value: sortKey || "",
+    onChange: function(k) { setSortKey(k.target.value); if (!k.target.value) { setSortDir("asc"); } },
+    style: {
+      ...ne,
+      fontWeight: 700,
+      flex: 1
+    }
+  }, React.createElement("option", { value: "" }, "\u{1F504} Sort by\u2026"),
+    React.createElement("option", { value: "title" }, "Title"),
+    React.createElement("option", { value: "start" }, "Start time"),
+    React.createElement("option", { value: "venue" }, "Venue name"),
+    React.createElement("option", { value: "duration" }, "Duration"),
+    React.createElement("option", { value: "price" }, "Price"),
+    React.createElement("option", { value: "dates" }, "Dates"),
+    React.createElement("option", { value: "genre" }, "Genre")),
+  sortKey && React.createElement("button", {
+    "aria-label": sortDir === "asc" ? "Sort ascending" : "Sort descending",
+    title: sortDir === "asc" ? "Ascending \u2014 click to reverse" : "Descending \u2014 click to reverse",
+    onClick: function() { setSortDir(sortDir === "asc" ? "desc" : "asc"); },
+    style: {
+      ...ne,
+      width: 44,
+      flexShrink: 0,
+      fontWeight: 900,
+      fontSize: 14,
+      cursor: "pointer",
+      textAlign: "center",
+      padding: "8px 0"
+    }
+  }, sortDir === "asc" ? "\u2191" : "\u2193")),
   // Row 1: Search bar (full width)
   React.createElement("input", {
     value: t,
@@ -4411,50 +4459,15 @@ function FilterControls({
   }, "\u{1F48E} Rarest genre"), React.createElement("option", {
     value: "pop"
   }, "\u{1F525} Most popular genre")),
-  // Row 3: Sort by (full width) \u2014 dropdown + direction toggle
-  sortKey !== undefined && React.createElement("div", {
-    style: { ...pt, display: "flex", gap: 6 }
-  }, React.createElement("select", {
-    "aria-label": "Sort by",
-    value: sortKey || "",
-    onChange: function(k) { setSortKey(k.target.value); if (!k.target.value) { setSortDir("asc"); } },
-    style: {
-      ...ne,
-      fontWeight: 700,
-      flex: 1
-    }
-  }, React.createElement("option", { value: "" }, "\u{1F504} Sort by\u2026"),
-    React.createElement("option", { value: "title" }, "Title"),
-    React.createElement("option", { value: "start" }, "Start time"),
-    React.createElement("option", { value: "venue" }, "Venue name"),
-    React.createElement("option", { value: "duration" }, "Duration"),
-    React.createElement("option", { value: "price" }, "Price"),
-    React.createElement("option", { value: "dates" }, "Dates"),
-    React.createElement("option", { value: "genre" }, "Genre")),
-  sortKey && React.createElement("button", {
-    "aria-label": sortDir === "asc" ? "Sort ascending" : "Sort descending",
-    title: sortDir === "asc" ? "Ascending \u2014 click to reverse" : "Descending \u2014 click to reverse",
-    onClick: function() { setSortDir(sortDir === "asc" ? "desc" : "asc"); },
-    style: {
-      ...ne,
-      width: 44,
-      flexShrink: 0,
-      fontWeight: 900,
-      fontSize: 14,
-      cursor: "pointer",
-      textAlign: "center",
-      padding: "8px 0"
-    }
-  }, sortDir === "asc" ? "\u2191" : "\u2193")),
   // Row 4: Start time + Duration (side by side)
   React.createElement("select", {
-    "aria-label": "Start time of day",
+    "aria-label": "Time of day",
     value: it,
     onChange: k => $e(k.target.value),
-    style: ne
+    style: Object.assign({}, ne, pt)
   }, React.createElement("option", {
     value: ""
-  }, "\u{1F550} Any start"), React.createElement("option", {
+  }, "\u{1F550} Any Time of Day"), React.createElement("option", {
     value: "morning"
   }, "\u{1F305} Morning (6am\u201312)"), React.createElement("option", {
     value: "afternoon"
@@ -4463,23 +4476,8 @@ function FilterControls({
   }, "\u{1F306} Evening (5\u201310pm)"), React.createElement("option", {
     value: "late"
   }, "\u{1F319} Late (10pm\u20136am)")),
-  React.createElement("select", {
-    "aria-label": "Duration",
-    value: ct,
-    onChange: k => Qe(k.target.value),
-    style: ne
-  }, React.createElement("option", {
-    value: ""
-  }, "\u23F1 Duration\u2026"), React.createElement("option", {
-    value: "30"
-  }, "\u2264 30 min"), React.createElement("option", {
-    value: "60"
-  }, "\u2264 60 min"), React.createElement("option", {
-    value: "90"
-  }, "\u2264 90 min"), React.createElement("option", {
-    value: "120"
-  }, "\u2264 120 min")),
-  // Row 5: Date + Venue (date is special with chip display)
+  // Row 5: Date + Duration
+  React.createElement("div", { style: Object.assign({display: "flex", gap: 8, alignItems: "start"}, pt) },
   React.createElement("div", {
     style: {
       display: "flex",
@@ -4555,6 +4553,23 @@ function FilterControls({
       }
     }, "\u2715"))
   }))),
+React.createElement("select", {
+    "aria-label": "Duration",
+    value: ct,
+    onChange: k => Qe(k.target.value),
+    style: ne
+  }, React.createElement("option", {
+    value: ""
+  }, "\u23F1 Duration\u2026"), React.createElement("option", {
+    value: "30"
+  }, "\u2264 30 min"), React.createElement("option", {
+    value: "60"
+  }, "\u2264 60 min"), React.createElement("option", {
+    value: "90"
+  }, "\u2264 90 min"), React.createElement("option", {
+    value: "120"
+  }, "\u2264 120 min"))),
+  // Row 6: Venue
   React.createElement(MultiPick, {
     label: "\u{1F4CD} Venue (name, # or postcode)",
     options: xe,
@@ -4578,6 +4593,13 @@ function FilterControls({
     value: k
   }, k))),
   React.createElement("select", {
+    "aria-label": "Production company",
+    value: orgFilter || "",
+    onChange: function(k) { setOrgFilter(k.target.value); },
+    style: ne
+  }, React.createElement("option", {value: ""}, "\u{1F3E2} All companies"),
+  Object.keys(ORG_COLORS).map(function(k) { return React.createElement("option", {key: k, value: k}, k); })),
+  React.createElement("select", {
     "aria-label": "Country",
     value: Re,
     onChange: k => ee(k.target.value),
@@ -4588,7 +4610,7 @@ function FilterControls({
     key: k,
     value: k
   }, k))),
-  // Row 7: Age + Going with
+  // Row 7: Age + Going with (Going with only on Bookings)
   React.createElement("select", {
     "aria-label": "Age rating",
     value: s,
@@ -4600,7 +4622,7 @@ function FilterControls({
     key: k,
     value: k
   }, "Suitable ", k))),
-  function() {
+  section === "booked" ? function() {
     var compVals = Object.values(companions).filter(function(v) { return v && v.trim(); });
     var allNames = [];
     compVals.forEach(function(v) { v.split(",").forEach(function(n) { var nm = n.trim(); if (nm) allNames.push(nm); }); });
@@ -4613,7 +4635,7 @@ function FilterControls({
       style: ne
     }, React.createElement("option", {value: ""}, "\u{1F465} Going with\u2026"),
     uniqueComps.map(function(c) { return React.createElement("option", {key: c, value: c}, c); }));
-  }(),
+  }() : null,
   allUserTags && allUserTags.length > 0 ? React.createElement("select", {
     "aria-label": "My tags",
     value: tagFilter || "",
@@ -4670,7 +4692,7 @@ function FilterControls({
       fontSize: 12,
       textAlign: "center",
       boxSizing: "border-box",
-      colorScheme: THEME === "light" ? "light" : "dark"
+      colorScheme: (THEME === "light" || THEME === "lightbw") ? "light" : "dark"
     }
   }), React.createElement("div", {
     style: {
@@ -4741,7 +4763,7 @@ function FilterControls({
       fontSize: 12,
       textAlign: "center",
       boxSizing: "border-box",
-      colorScheme: THEME === "light" ? "light" : "dark"
+      colorScheme: (THEME === "light" || THEME === "lightbw") ? "light" : "dark"
     }
   }))))))
 }
@@ -4902,7 +4924,7 @@ function Tiles({
         background: "transparent",
         color: C.txt2,
         fontSize: 15,
-        colorScheme: THEME === "light" ? "light" : "dark",
+        colorScheme: (THEME === "light" || THEME === "lightbw") ? "light" : "dark",
         padding: 0,
         textAlign: "center",
         textAlignLast: "center",
@@ -5053,6 +5075,7 @@ function App() {
       } catch { return {} }
     }),
     [compFilter, setCompFilter] = useState(""),
+    [orgFilter, setOrgFilter] = useState(""),
     [bkDateFilter, setBkDateFilter] = useState(""),
     [isOffline, setIsOffline] = useState(!navigator.onLine),
     [updateAvail, setUpdateAvail] = useState(false),
@@ -5089,6 +5112,7 @@ function App() {
     [spendChartOpen, setSpendChartOpen] = useState(false),
     [glanceOpen, setGlanceOpen] = useState(true),
     [venueHeatOpen, setVenueHeatOpen] = useState(true),
+    [venueHeatShowAll, setVenueHeatShowAll] = useState(false),
     [bkOverviewOpen, setBkOverviewOpen] = useState(function() { try { var v = localStorage.getItem("fringe-public-bkoverview-v1"); return v === null ? true : v === "1"; } catch(e) { return true; } }),
     [clockTick, setClockTick] = useState(0),
     [companionView, setCompanionView] = useState(false),
@@ -5102,9 +5126,10 @@ function App() {
     [customLists, setCustomLists] = useState(function() { try { var v = JSON.parse(localStorage.getItem("fringe-public-clists-v1") || "[]"); if (!v.length && __DS && __DS.customLists) return __DS.customLists; return v; } catch(e) { return (__DS && __DS.customLists) || []; } }),
     [clistAdding, setClistAdding] = useState(null),
     [clistNewName, setClistNewName] = useState(""),
-    [reviewStarFilter, setReviewStarFilter] = useState(null),
+    [reviewStarFilter, setReviewStarFilter] = useState([]),
     [nextYearList, setNextYearList] = useState(function() { try { return JSON.parse(localStorage.getItem("fringe-public-nextyear-v1") || "[]"); } catch(e) { return []; } }),
     [nySearch, setNySearch] = useState(""),
+    [nyNoteOpen, setNyNoteOpen] = useState(null),
     [budgetCap, setBudgetCap] = useState(function() { try { var v = localStorage.getItem("fringe-public-budget-v1"); if (v !== null) return JSON.parse(v); if (__DS && __DS.budget != null) return __DS.budget; return null; } catch(e) { return (__DS && __DS.budget != null) ? __DS.budget : null; } }),
     [budgetEditing, setBudgetEditing] = useState(false),
     [reviewView, setReviewView] = useState("tiles"),
@@ -5150,7 +5175,8 @@ function App() {
       r.length && r[0].some(l => /^(title|section|question|heading|topic|content|answer|body|text|help)$/i.test((l || "").trim())) && (r = r.slice(1)), ft(r)
     }).catch(() => ft("error"))))
   }, [k]);
-  const [Q, mt] = useState(t.view || "browse"), [Pe, At] = useState(t.q || ""), [_e, Nt] = useState(t.genre || ""), [Ve, Et] = useState(t.age || ""), [He, Dt] = useState(t.access || ""), [Ae, Bt] = useState(t.pmin ? Number(t.pmin) : null), [Ne, Mt] = useState(t.pmax ? Number(t.pmax) : null), [Ee, Ft] = useState(t.on || ""), [nt, jt] = useState(() => new Set(t.dates ? t.dates.split("|") : [])), [Pn, _n] = useState(""), [We, Lt] = useState(() => new Set(t.venue ? t.venue.split("|") : [])), [De, Pt] = useState(() => new Set(t.venueNo ? t.venueNo.split("|") : [])), [Ue, _t] = useState(t.atype || ""), [Ge, Vt] = useState(t.country || ""), [Je, Ht] = useState(t.dur || ""), [we, Ut] = useState(t.tod || ""), [qe, Gt] = useState(t.df || ""), [Ye, Jt] = useState(t.dt || ""), [$, qt] = useState(t.smart || ""), [Ze, dn] = useState(!1), [st, kt] = useState(60), [oe, de] = useState(null), [V, cn] = useState(typeof window < "u" && window.innerWidth <= 640), [un, Ie] = useState(!1), [dt, Ct] = useState(null), [gt, pn] = useState(() => {
+  const [Q, _mt_raw] = useState(function() { if (t.view) return t.view; try { return localStorage.getItem("fringe-public-lasttab") || "browse"; } catch(e) { return "browse"; } }()),
+  mt = function(tab) { _mt_raw(tab); try { localStorage.setItem("fringe-public-lasttab", tab); } catch(e) {} }, [Pe, At] = useState(t.q || ""), [_e, Nt] = useState(t.genre || ""), [Ve, Et] = useState(t.age || ""), [He, Dt] = useState(t.access || ""), [Ae, Bt] = useState(t.pmin ? Number(t.pmin) : null), [Ne, Mt] = useState(t.pmax ? Number(t.pmax) : null), [Ee, Ft] = useState(t.on || ""), [nt, jt] = useState(() => new Set(t.dates ? t.dates.split("|") : [])), [Pn, _n] = useState(""), [We, Lt] = useState(() => new Set(t.venue ? t.venue.split("|") : [])), [De, Pt] = useState(() => new Set(t.venueNo ? t.venueNo.split("|") : [])), [Ue, _t] = useState(t.atype || ""), [Ge, Vt] = useState(t.country || ""), [Je, Ht] = useState(t.dur || ""), [we, Ut] = useState(t.tod || ""), [qe, Gt] = useState(t.df || ""), [Ye, Jt] = useState(t.dt || ""), [$, qt] = useState(t.smart || ""), [Ze, dn] = useState(!1), [st, kt] = useState(60), [oe, de] = useState(null), [V, cn] = useState(typeof window < "u" && window.innerWidth <= 640), [un, Ie] = useState(!1), [dt, Ct] = useState(null), [gt, pn] = useState(() => {
     try {
       return localStorage.getItem("fringe-public-theme") || "dark"
     } catch {
@@ -5163,7 +5189,7 @@ function App() {
       return []
     }
   }), [gn, ht] = useState(!1), [hn, vt] = useState(!1), [vn, Yt] = useState(!1), [bn, Zt] = useState(!1);
-  const clearFilters = () => { At(""); Nt(""); Et(""); Dt(""); Bt(null); Mt(null); Ft(""); jt(new Set()); _n(""); Lt(new Set()); Pt(new Set()); _t(""); Vt(""); Ht(""); Ut(""); Gt(""); Jt(""); qt(""); setTagFilter(""); };
+  const clearFilters = () => { At(""); Nt(""); Et(""); Dt(""); Bt(null); Mt(null); Ft(""); jt(new Set()); _n(""); Lt(new Set()); Pt(new Set()); _t(""); Vt(""); Ht(""); Ut(""); Gt(""); Jt(""); qt(""); setTagFilter(""); setOrgFilter(""); };
   useEffect(() => {
     try {
       var e = "fringe-public-data-version",
@@ -5918,6 +5944,7 @@ function App() {
       }
       if (compFilter) { var _hasComp = (companions[e.code] && companions[e.code].split(",").some(function(n) { return n.trim() === compFilter; })) || (p[e.code] && p[e.code].some(function(rec) { return rec.companions && rec.companions.split(",").some(function(n) { return n.trim() === compFilter; }); })); if (!_hasComp) return !1; }
       if (tagFilter && !(showTags[e.code] && showTags[e.code].indexOf(tagFilter) >= 0)) return !1;
+      if (orgFilter) { var _vn = (e.venue || "").toLowerCase(); if (_vn.indexOf(orgFilter.toLowerCase()) < 0) return !1; }
       return !0
     },
     Xe = useMemo(function() {
@@ -5941,7 +5968,7 @@ function App() {
         var va = sortVal(a), vb = sortVal(b);
         return va < vb ? -1 * dir : va > vb ? 1 * dir : 0;
       });
-    }, [n, Pe, _e, Ve, He, Ae, Ne, Ee, nt, We, De, Ue, Ge, Je, we, qe, Ye, $, It, compFilter, companions, tagFilter, showTags, Qe, $e]),
+    }, [n, Pe, _e, Ve, He, Ae, Ne, Ee, nt, We, De, Ue, Ge, Je, we, qe, Ye, $, It, compFilter, companions, tagFilter, showTags, Qe, $e, orgFilter]),
     Me_ = useMemo(() => n ? n.filter(e => d.has(e.code)) : [], [n, d]),
     Me = useMemo(function() {
       var arr = Me_.slice();
@@ -5958,7 +5985,7 @@ function App() {
   useEffect(() => {
     kt(D === "table" ? _ : v)
   }, [D, v, _, Pe, _e, Ve, He, Ae, Ne, Ee, We, De, Ue, Ge, Je, we, qe, Ye, $]);
-  const me = Pe || _e || Ve || He || Ae != null || Ne != null || Ee || nt.size || We.size || De.size || Ue || Ge || Je || we || qe || Ye || $ || tagFilter,
+  const me = Pe || _e || Ve || He || Ae != null || Ne != null || Ee || nt.size || We.size || De.size || Ue || Ge || Je || we || qe || Ye || $ || tagFilter || orgFilter,
     Rt = () => {
       At(""), Nt(""), Et(""), Dt(""), Bt(null), Mt(null), Ft(""), Kt(), Xt(), _t(""), Vt(""), Ht(""), Ut(""), Gt(""), Jt(""), qt("")
     },
@@ -6260,27 +6287,31 @@ function App() {
         background: Q === e ? "rgba(168,85,247,0.22)" : "transparent",
         color: Q === e ? "#c084fc" : C.txt2
       } : {
-        padding: "8px 16px",
+        padding: "6px 10px",
         borderRadius: 20,
         border: "1px solid " + C.border,
         cursor: "pointer",
         fontWeight: 800,
-        flex: "none",
+        fontSize: 11,
+        flex: "0 1 auto",
         display: "flex",
         flexDirection: "row",
         alignItems: "center",
-        gap: 6,
-        background: Q === e ? C.txt : "transparent",
-        color: Q === e ? C.bg : C.txt2
+        justifyContent: "center",
+        gap: 4,
+        height: 36,
+        whiteSpace: "nowrap",
+        background: Q === e ? (THEME === "lightbw" ? "#ccc" : C.txt) : "transparent",
+        color: Q === e ? (THEME === "lightbw" ? "#111" : C.bg) : C.txt2
       }
     }, React.createElement("span", {
       style: {
-        fontSize: V ? 20 : 15,
+        fontSize: V ? 20 : 14,
         lineHeight: 1
       }
     }, l), !V && React.createElement("span", {
       style: {
-        fontSize: 14
+        fontSize: 11
       }
     }, r));
   return React.createElement("div", {
@@ -6435,7 +6466,12 @@ function App() {
       "aria-label": "Menu",
       title: "Menu",
       style: {width: 40, height: 36, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 8, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 18, cursor: "pointer", padding: 0}
-    }, burgerOpen ? "✕" : "☰") : React.createElement(React.Fragment, null, React.createElement(ThemeToggleCollapsible, {
+    }, burgerOpen ? "✕" : "☰") : React.createElement(React.Fragment, null, React.createElement("button", {
+      onClick: function() { setBurgerOpen(!burgerOpen); },
+      "aria-label": "Menu",
+      title: "Menu",
+      style: {width: 36, height: 36, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 8, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 18, cursor: "pointer", padding: 0}
+    }, burgerOpen ? "✕" : "☰"), React.createElement(ThemeToggleCollapsible, {
       theme: gt,
       set: pn
     }), React.createElement("button", {
@@ -6521,14 +6557,15 @@ function App() {
       "aria-label": "Sections",
       style: {
         display: "flex",
-        gap: 6,
+        gap: 5,
         justifyContent: "center",
+        alignItems: "center",
         flexWrap: "wrap",
         marginBottom: 12,
         marginTop: 8
       }
     }, pe("booked", "Bookings", "\u{1F3AB}"), pe("browse", "Browse all", "\u{1F3AD}"), pe("calendar", "Calendar", "\u{1F4C5}"), pe("map", "Map", "\u{1F5FA}\uFE0F"), pe("nextyear", "Next Yr", "\u{1F52E}"), pe("proposals", "Pitch a Day!", "\u{1F4CB}"), pe("planner", "Planner", "\u{1F9ED}"), pe("reviews", "Reviews", "\u2B50"), pe("stats", "Stats", "\u{1F4CA}"), pe("plan", "Wishlist", "\u{1FA84}")))
-  }(), V && burgerOpen && React.createElement("div", {
+  }(), burgerOpen && React.createElement("div", {
     onClick: function(ev) { if (ev.target === ev.currentTarget) setBurgerOpen(false); },
     style: { position: "fixed", inset: 0, zIndex: 9998, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }
   }, React.createElement("div", {
@@ -6549,7 +6586,7 @@ function App() {
     React.createElement("div", { style: { padding: "12px 14px", borderTop: "1px solid " + C.border } },
       React.createElement("div", { style: { fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: C.txt3, letterSpacing: 0.5, marginBottom: 8 } }, "Theme"),
       React.createElement("div", { style: { display: "flex", gap: 6 } },
-        [["dark", "\u{1F31A}", "Dark"], ["light", "\u2600\uFE0F", "Light"], ["nocolor", "\u26AB", "B&W"]].map(function(th) {
+        [["dark", "\u{1F31A}", "Dark"], ["light", "\u2600\uFE0F", "Light"], ["nocolor", "\u26AB", "B&W"], ["lightbw", "\u26AA", "Light B&W"]].map(function(th) {
           var isActive = gt === th[0];
           return React.createElement("button", {
             key: th[0],
@@ -6720,7 +6757,7 @@ function App() {
       ve = {},
       Ce = {};
     r.forEach(function(z) {
-      z.s.genre && (ve[z.s.genre] = (ve[z.s.genre] || 0) + 1), z.s.venue && (Ce[venueLabel_(z.s)] = (Ce[venueLabel_(z.s)] || 0) + 1)
+      z.s.genre && (ve[z.s.genre] = (ve[z.s.genre] || 0) + 1), (function(){ var _sv = z.rec.venue || venueLabel_(z.s); if (_sv) Ce[_sv] = (Ce[_sv] || 0) + 1; }())
     });
     var Fe = function(z, L) {
         return Object.keys(z).map(function(ce) {
@@ -7052,7 +7089,7 @@ function App() {
                 React.createElement("span", {style: {fontSize: 14, color: "#FBBF24", flexShrink: 0}}, "★★★★★"),
                 React.createElement("div", {style: {flex: 1, minWidth: 0}},
                   React.createElement("div", {style: {fontSize: 13, fontWeight: 800, color: C.txt, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}}, show.title),
-                  React.createElement("div", {style: {fontSize: 11, color: C.txt3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}}, show.venue || "")
+                  React.createElement("div", {style: {fontSize: 11, color: C.txt3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}}, (p[show.code] && p[show.code][0] && p[show.code][0].venue) || venueLabel_(show) || "")
                 )
               );
             })
@@ -7399,7 +7436,7 @@ function App() {
           }
         }
         var bkr = item.rec.booker || bookerData[item.code] || "";
-        if (bkr.trim() && bkr.trim() !== "Myself") bookerCounts[bkr.trim()] = (bookerCounts[bkr.trim()] || 0) + 1;
+        if (bkr.trim() && bkr.trim() !== "Me") bookerCounts[bkr.trim()] = (bookerCounts[bkr.trim()] || 0) + 1;
       });
       var friendNames = Object.keys(friendCounts).sort(function(a, b) { return friendCounts[b] - friendCounts[a]; });
       var bookerNames = Object.keys(bookerCounts).sort(function(a, b) { return bookerCounts[b] - bookerCounts[a]; });
@@ -7729,10 +7766,24 @@ function App() {
       var tb = (showMap[b] && showMap[b].title || "").toLowerCase();
       return ta < tb ? -1 : ta > tb ? 1 : 0;
     });
-    var filteredOrdered = reviewStarFilter != null ? ordered.filter(function(code) {
-      var r = ratings[code] || 0;
-      return reviewStarFilter === 0 ? (r < 1 || r > 5) : r === reviewStarFilter;
-    }) : ordered;
+    var filteredOrdered = ordered.filter(function(code) {
+      if (reviewStarFilter.length > 0) {
+        var r = ratings[code] || 0;
+        if (reviewStarFilter.indexOf(r < 1 || r > 5 ? 0 : r) < 0) return false;
+      }
+      var s = showMap[code];
+      if (!s) return true;
+      if (Pe && Pe.trim()) {
+        var q = Pe.toLowerCase();
+        if (!((s.title || "") + " " + (s.artist || "") + " " + (s.venue || "") + " " + (s.genre || "")).toLowerCase().includes(q)) return false;
+      }
+      if (_e && s.genre !== _e) return false;
+      if (orgFilter && (s.venue || "").toLowerCase().indexOf(orgFilter.toLowerCase()) < 0) return false;
+      if (We.size && !(We.has(s.venueCode) || We.has(s.venue))) return false;
+      if (Ve && s.age !== Ve) return false;
+      if (tagFilter && !(showTags[s.code] && showTags[s.code].indexOf(tagFilter) >= 0)) return false;
+      return true;
+    });
     var moveItem = function(fromIdx, toIdx) {
       if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0 || fromIdx >= ordered.length || toIdx >= ordered.length) return;
       var arr = ordered.slice();
@@ -7784,11 +7835,11 @@ function App() {
         React.createElement("div", { style: { display: "flex", gap: 0, borderRadius: 10, overflow: "hidden", border: "1px solid " + C.border } },
           React.createElement("button", {
             onClick: function() { setReviewView("tiles"); },
-            style: { padding: "7px 14px", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", background: reviewView === "tiles" ? C.accent : "transparent", color: reviewView === "tiles" ? "#fff" : C.txt2 }
+            style: { padding: "7px 14px", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", background: reviewView === "tiles" ? (THEME === "lightbw" ? "#ccc" : C.accent) : "transparent", color: reviewView === "tiles" ? (THEME === "lightbw" ? "#111" : "#fff") : C.txt2 }
           }, "Tiles"),
           React.createElement("button", {
             onClick: function() { setReviewView("table"); },
-            style: { padding: "7px 14px", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", background: reviewView === "table" ? C.accent : "transparent", color: reviewView === "table" ? "#fff" : C.txt2 }
+            style: { padding: "7px 14px", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer", background: reviewView === "table" ? (THEME === "lightbw" ? "#ccc" : C.accent) : "transparent", color: reviewView === "table" ? (THEME === "lightbw" ? "#111" : "#fff") : C.txt2 }
           }, "Table")
         )
       ),
@@ -7797,22 +7848,28 @@ function App() {
         var unrated = 0;
         ordered.forEach(function(code) { var r = ratings[code]; if (r >= 1 && r <= 5) starCounts[r - 1]++; else unrated++; });
         return React.createElement("div", {style: {display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16, alignItems: "center", justifyContent: "center"}},
+          React.createElement("button", {key: "all", onClick: function() { setReviewStarFilter([]); }, style: {
+              padding: "5px 10px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer",
+              background: reviewStarFilter.length === 0 ? "rgba(168,85,247,0.22)" : "transparent",
+              border: "1px solid " + (reviewStarFilter.length === 0 ? "rgba(168,85,247,0.5)" : C.border),
+              color: reviewStarFilter.length === 0 ? C.accent : C.txt2
+            }}, "All"),
           [5, 4, 3, 2, 1].map(function(star) {
             var count = starCounts[star - 1];
-            var isActive = reviewStarFilter === star;
-            return React.createElement("button", {key: star, onClick: function() { setReviewStarFilter(isActive ? null : star); }, style: {
+            var isActive = reviewStarFilter.indexOf(star) >= 0;
+            return React.createElement("button", {key: star, onClick: function() { setReviewStarFilter(function(prev) { return isActive ? prev.filter(function(s) { return s !== star; }) : prev.concat([star]); }); }, style: {
               padding: "5px 10px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer",
               background: isActive ? "rgba(168,85,247,0.22)" : "transparent",
               border: "1px solid " + (isActive ? "rgba(168,85,247,0.5)" : C.border),
               color: isActive ? C.accent : C.txt2, display: "flex", alignItems: "center", gap: 4
             }}, "★".repeat(star), React.createElement("span", {style: {color: isActive ? C.accent : C.txt3, fontWeight: 600}}, count));
           }),
-          unrated > 0 && React.createElement("button", {onClick: function() { setReviewStarFilter(reviewStarFilter === 0 ? null : 0); }, style: {
+          unrated > 0 && React.createElement("button", {onClick: function() { setReviewStarFilter(function(prev) { return prev.indexOf(0) >= 0 ? prev.filter(function(s) { return s !== 0; }) : prev.concat([0]); }); }, style: {
             padding: "5px 10px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: "pointer",
-            background: reviewStarFilter === 0 ? "rgba(168,85,247,0.22)" : "transparent",
-            border: "1px solid " + (reviewStarFilter === 0 ? "rgba(168,85,247,0.5)" : C.border),
-            color: reviewStarFilter === 0 ? C.accent : C.txt3
-          }}, "Unrated ", React.createElement("span", {style: {color: reviewStarFilter === 0 ? C.accent : C.txt3, fontWeight: 600}}, unrated))
+            background: reviewStarFilter.indexOf(0) >= 0 ? "rgba(168,85,247,0.22)" : "transparent",
+            border: "1px solid " + (reviewStarFilter.indexOf(0) >= 0 ? "rgba(168,85,247,0.5)" : C.border),
+            color: reviewStarFilter.indexOf(0) >= 0 ? C.accent : C.txt3
+          }}, "Unrated ", React.createElement("span", {style: {color: reviewStarFilter.indexOf(0) >= 0 ? C.accent : C.txt3, fontWeight: 600}}, unrated))
         );
       }(),
       ordered.length === 0 ? React.createElement("div", {
@@ -8277,7 +8334,7 @@ function App() {
         color: C.txt,
         fontSize: 12,
         fontWeight: 700,
-        colorScheme: THEME === "light" ? "light" : "dark"
+        colorScheme: (THEME === "light" || THEME === "lightbw") ? "light" : "dark"
       }
     }, [20, 60, 120, 200].map(function(i) {
       return React.createElement("option", {
@@ -8799,7 +8856,10 @@ function App() {
         var dayItems = l[d] || [];
         return dayItems.some(function(u) {
           var endM = timeToMin_(u.rec.end || u.s.endStr);
-          return endM == null || (endM + 1) > nowMin;
+          if (endM == null) return true;
+          if (endM < 300) endM += 1440;
+          var _nm = nowMin < 300 ? nowMin + 1440 : nowMin;
+          return (endM + 1) > _nm;
         });
       });
     }
@@ -8982,6 +9042,15 @@ function App() {
         r.forEach(function(u) { var g = u.s.genre || "Other"; var pr = perfPrice_(u.s, u.rec) || 0; data[g] = (data[g] || 0) + pr; });
       } else if (spendChartMode === "venue") {
         r.forEach(function(u) { var v = u.rec.venue || venueLabel_(u.s) || "Unknown"; var pr = perfPrice_(u.s, u.rec) || 0; data[v] = (data[v] || 0) + pr; });
+      } else if (spendChartMode === "person") {
+        r.forEach(function(u) {
+          var pr = perfPrice_(u.s, u.rec) || 0;
+          if (pr === 0) return;
+          var meAttends = u.rec.meAttending !== false;
+          if (meAttends) data["Me"] = (data["Me"] || 0) + pr;
+          var paidFor = (u.rec.paidFor || "").split(",").map(function(x) { return x.trim(); }).filter(Boolean);
+          paidFor.forEach(function(nm) { data[nm] = (data[nm] || 0) + pr; });
+        });
       } else {
         r.forEach(function(u) { var d = u.rec.date || "No date"; var pr = perfPrice_(u.s, u.rec) || 0; data[d] = (data[d] || 0) + pr; });
       }
@@ -9009,7 +9078,7 @@ function App() {
         ),
         spendChartOpen && React.createElement("div", null,
           React.createElement("div", { style: { display: "flex", gap: 4, margin: "8px 0 10px", justifyContent: "center" } },
-            modeBtn("genre", "By genre"), modeBtn("venue", "By venue"), modeBtn("day", "By day")
+            modeBtn("genre", "By genre"), modeBtn("venue", "By venue"), modeBtn("day", "By day"), modeBtn("person", "By person")
           ),
           React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
             entries.slice(0, 10).map(function(e, idx) {
@@ -9054,25 +9123,35 @@ function App() {
           React.createElement("span", { style: { fontSize: 12, color: C.txt3, transition: "transform 0.2s", transform: venueHeatOpen ? "rotate(180deg)" : "rotate(0)" } }, "\u25BC")
         ),
         venueHeatOpen && React.createElement(React.Fragment, null,
-        React.createElement("div", {
-          style: { display: "flex", flexWrap: "wrap", gap: 6 }
-        }, vKeys.map(function(v) {
-          var c = vCounts[v];
-          var h = heatColor(c);
-          return React.createElement("div", {
-            key: v,
-            title: v + ": " + c + " show" + (c > 1 ? "s" : ""),
-            style: { padding: "6px 10px", borderRadius: 8, background: h.bg, border: "1px solid " + h.border, fontSize: 11, fontWeight: 700, color: h.text, display: "flex", alignItems: "center", gap: 4 }
-          }, React.createElement("span", { style: { fontSize: 14 } }, c > 2 ? "🔥" : c > 1 ? "📌" : "📍"),
-            React.createElement("span", { style: { maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, v),
-            React.createElement("span", { style: { background: h.text, color: "#fff", borderRadius: 10, padding: "0 5px", fontSize: 10, fontWeight: 800, marginLeft: 2 } }, c)
-          );
-        })),
-        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 8, justifyContent: "center", fontSize: 10, color: C.txt3 } },
-          React.createElement("span", null, "📍 1 visit"),
-          React.createElement("span", null, "📌 2+ visits"),
-          React.createElement("span", null, "🔥 3+ visits")
-        ))
+        function() {
+          var showAll = !V || venueHeatShowAll;
+          var displayKeys = showAll ? vKeys : vKeys.slice(0, 5);
+          var hiddenCount = vKeys.length - 5;
+          return React.createElement(React.Fragment, null,
+          React.createElement("div", {
+            style: { display: "flex", flexWrap: "wrap", gap: 6 }
+          }, displayKeys.map(function(v) {
+            var c = vCounts[v];
+            var h = heatColor(c);
+            return React.createElement("div", {
+              key: v,
+              title: v + ": " + c + " show" + (c > 1 ? "s" : ""),
+              style: { padding: "6px 10px", borderRadius: 8, background: h.bg, border: "1px solid " + h.border, fontSize: 11, fontWeight: 700, color: h.text, display: "flex", alignItems: "center", gap: 4 }
+            }, React.createElement("span", { style: { fontSize: 14 } }, c > 2 ? "🔥" : c > 1 ? "📌" : "📍"),
+              React.createElement("span", { style: { maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, v),
+              React.createElement("span", { style: { background: h.text, color: "#fff", borderRadius: 10, padding: "0 5px", fontSize: 10, fontWeight: 800, marginLeft: 2 } }, c)
+            );
+          })),
+          V && hiddenCount > 0 && React.createElement("button", {
+            onClick: function() { setVenueHeatShowAll(!venueHeatShowAll); },
+            style: { display: "block", margin: "8px auto 0", padding: "4px 14px", borderRadius: 8, border: "1px solid " + C.border, background: "transparent", color: C.txt3, fontSize: 11, fontWeight: 600, cursor: "pointer" }
+          }, venueHeatShowAll ? "Show less" : "Show all " + vKeys.length + " venues"),
+          React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 8, justifyContent: "center", fontSize: 10, color: C.txt3 } },
+            React.createElement("span", null, "📍 1 visit"),
+            React.createElement("span", null, "📌 2+ visits"),
+            React.createElement("span", null, "🔥 3+ visits")
+          ));
+        }())
       );
     }(),
     // Expense splitter
@@ -9083,18 +9162,21 @@ function App() {
       r.forEach(function(u) {
         var comps = (u.rec.companions || companions[u.code] || "").split(",").map(function(c) { return c.trim(); }).filter(Boolean);
         var price = perfPrice_(u.s, u.rec) || 0;
-        // Always add "Myself"
-        if (!allPpl["Myself"]) allPpl["Myself"] = { total: 0, shows: [] };
-        allPpl["Myself"].total += price;
-        allPpl["Myself"].shows.push({ title: u.s.title, price: price, date: u.rec.date });
+        // Always add "Me" if attending
+        var _meAttends = u.rec.meAttending !== false;
+        if (_meAttends) {
+          if (!allPpl["Me"]) allPpl["Me"] = { total: 0, shows: [] };
+          allPpl["Me"].total += price;
+          allPpl["Me"].shows.push({ title: u.s.title, price: price, date: u.rec.date });
+        }
         comps.forEach(function(c) {
           if (!allPpl[c]) allPpl[c] = { total: 0, shows: [] };
           allPpl[c].total += price;
           allPpl[c].shows.push({ title: u.s.title, price: price, date: u.rec.date });
         });
       });
-      var names = Object.keys(allPpl).sort(function(a, b) { return a === "Myself" ? -1 : b === "Myself" ? 1 : a.localeCompare(b); });
-      if (names.length <= 1) return null; // Only "Myself", no companions to split with
+      var names = Object.keys(allPpl).sort(function(a, b) { return a === "Me" ? -1 : b === "Me" ? 1 : a.localeCompare(b); });
+      if (names.length <= 1) return null; // Only "Me", no companions to split with
       // Calculate per-person fair share (split each show evenly among attendees)
       var fairShare = {};
       names.forEach(function(n) { fairShare[n] = 0; });
@@ -9102,7 +9184,8 @@ function App() {
         var price = perfPrice_(u.s, u.rec) || 0;
         if (price === 0) return;
         var comps = (u.rec.companions || companions[u.code] || "").split(",").map(function(c) { return c.trim(); }).filter(Boolean);
-        var attendees = ["Myself"].concat(comps);
+        var _meAtt = u.rec.meAttending !== false;
+        var attendees = (_meAtt ? ["Me"] : []).concat(comps);
         var share = price / attendees.length;
         attendees.forEach(function(a) {
           if (fairShare[a] !== undefined) fairShare[a] += share;
@@ -9119,83 +9202,26 @@ function App() {
           React.createElement("span", { style: { fontSize: 12, color: C.txt3, transition: "transform 0.2s", transform: expSplitOpen ? "rotate(180deg)" : "rotate(0)" } }, "▼")
         ),
         expSplitOpen && React.createElement("div", { style: { marginTop: 10 } },
-          React.createElement("div", { style: { fontSize: 11, color: C.txt3, marginBottom: 8 } }, "Fair share — each show’s cost split evenly among attendees:"),
+          React.createElement("div", { style: { fontSize: 10, color: C.txt3, marginBottom: 6 } }, "Fair share — each show’s cost split evenly among attendees"),
+          React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr auto", gap: "0 8px", alignItems: "center" } },
           names.map(function(nm) {
             var share = fairShare[nm] || 0;
-            var maxShare = Math.max.apply(null, names.map(function(n) { return fairShare[n] || 0; }));
-            var pct = maxShare > 0 ? share / maxShare * 100 : 0;
-            var isMe = nm === "Myself";
-            return React.createElement("div", {
-              key: nm,
-              style: { marginBottom: 8 }
-            },
-              React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 } },
-                React.createElement("span", { style: { fontSize: 13, fontWeight: isMe ? 800 : 600, color: isMe ? C.txt : C.txt2 } }, (isMe ? "🙋 " : "👤 ") + nm),
-                React.createElement("span", { style: { fontSize: 13, fontWeight: 800, color: C.accent } }, "£" + share.toFixed(2))
+            var isMe = nm === "Me";
+            var showCount = allPpl[nm].shows.length;
+            return React.createElement(React.Fragment, { key: nm },
+              React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, padding: "3px 0", borderBottom: "1px solid " + C.border + "33" } },
+                React.createElement("span", { style: { fontSize: 11 } }, isMe ? "👤" : "👥"),
+                React.createElement("span", { style: { fontSize: 11, fontWeight: isMe ? 800 : 600, color: isMe ? C.txt : C.txt2 } }, nm),
+                React.createElement("span", { style: { fontSize: 9, color: C.txt3 } }, "(" + showCount + ")")
               ),
-              React.createElement("div", { style: { height: 6, borderRadius: 3, background: "rgba(255,255,255,0.06)", overflow: "hidden" } },
-                React.createElement("div", { style: { height: "100%", width: pct + "%", borderRadius: 3, background: isMe ? "linear-gradient(90deg,var(--pink),var(--accent))" : "linear-gradient(90deg,#60a5fa,#a78bfa)", transition: "width 0.3s" } })
-              ),
-              React.createElement("div", { style: { fontSize: 10, color: C.txt3, marginTop: 2 } }, allPpl[nm].shows.length + " show" + (allPpl[nm].shows.length !== 1 ? "s" : ""))
+              React.createElement("div", { style: { padding: "3px 0", borderBottom: "1px solid " + C.border + "33", textAlign: "right" } },
+                React.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: isMe ? C.accent : "#60a5fa" } }, "£" + share.toFixed(2))
+              )
             );
-          }),
-          // Summary
-          React.createElement("div", { style: { marginTop: 8, padding: "8px 10px", borderRadius: 8, background: "rgba(168,85,247,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" } },
-            React.createElement("span", { style: { fontSize: 12, color: C.txt2 } }, "Total across all attendees:"),
-            React.createElement("span", { style: { fontSize: 14, fontWeight: 800, color: C.accent } }, "£" + names.reduce(function(s, n) { return s + (fairShare[n] || 0); }, 0).toFixed(2))
-          )
-        )
-      );
-    }(),
-    // Interval reminders — countdown to next show
-    function() {
-      var todayItems = (l[nowStr] || []).slice().sort(function(a, b) {
-        return (timeToMin_(a.rec.start || a.s.startStr) || 0) - (timeToMin_(b.rec.start || b.s.startStr) || 0);
-      });
-      // Find next upcoming show (starts after now)
-      var upcoming = null;
-      for (var ui = 0; ui < todayItems.length; ui++) {
-        var st = timeToMin_(todayItems[ui].rec.start || todayItems[ui].s.startStr);
-        if (st != null && st > nowMin) { upcoming = { item: todayItems[ui], startMin: st, idx: ui }; break; }
-      }
-      if (!upcoming) return null;
-      var minsUntil = upcoming.startMin - nowMin;
-      var hrs = Math.floor(minsUntil / 60);
-      var mins = minsUntil % 60;
-      var timeStr = hrs > 0 ? hrs + "h " + mins + "m" : mins + " min";
-      // Check walk time from previous show
-      var walkWarning = null;
-      if (upcoming.idx > 0) {
-        var prev = todayItems[upcoming.idx - 1];
-        var prevEnd = timeToMin_(prev.rec.end || prev.s.endStr);
-        if (prevEnd == null) { var pst = timeToMin_(prev.rec.start || prev.s.startStr); if (pst != null) prevEnd = pst + (prev.s.duration || 60); }
-        if (prevEnd != null && prev.s.venue && upcoming.item.s.venue && venueLabel_(prev.s) !== venueLabel_(upcoming.item.s)) {
-          var wm = walkMin_(prev.s, upcoming.item.s);
-          if (wm != null && wm > 0) {
-            var gapMin = upcoming.startMin - prevEnd;
-            walkWarning = { walkTime: wm, gap: gapMin, tight: gapMin < wm + 5 };
-          }
-        }
-      }
-      var urgencyColor = minsUntil <= 15 ? "#ef4444" : minsUntil <= 30 ? "#f97316" : minsUntil <= 60 ? "#fbbf24" : "#4ade80";
-      var urgencyBg = minsUntil <= 15 ? "rgba(239,68,68,0.12)" : minsUntil <= 30 ? "rgba(249,115,22,0.12)" : minsUntil <= 60 ? "rgba(251,191,36,0.08)" : "rgba(74,222,128,0.08)";
-      return React.createElement("div", {
-        style: { marginTop: 10, padding: "12px 14px", borderRadius: 12, background: urgencyBg, border: "1px solid " + urgencyColor + "44" }
-      },
-        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
-          React.createElement("div", { style: { fontSize: 32, lineHeight: 1 } }, minsUntil <= 15 ? "🚨" : minsUntil <= 30 ? "⏰" : "⏳"),
-          React.createElement("div", { style: { flex: 1, minWidth: 0 } },
-            React.createElement("div", { style: { fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: urgencyColor } }, "Next show in " + timeStr),
-            React.createElement("div", {
-              onClick: function() { de(upcoming.item.s); },
-              style: { fontSize: 14, fontWeight: 800, color: C.txt, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }
-            }, upcoming.item.s.title),
-            React.createElement("div", { style: { fontSize: 11, color: C.txt2, marginTop: 1 } },
-              (upcoming.item.rec.start || upcoming.item.s.startStr) + " · " + (upcoming.item.rec.venue || venueLabel_(upcoming.item.s))
-            ),
-            walkWarning && React.createElement("div", { style: { fontSize: 11, marginTop: 3, color: walkWarning.tight ? "#ef4444" : "#fbbf24", fontWeight: 700 } },
-              walkWarning.tight ? "⚠️ " + walkWarning.walkTime + " min walk, only " + walkWarning.gap + " min gap!" : "🚶 " + walkWarning.walkTime + " min walk — " + walkWarning.gap + " min gap"
-            )
+          })),
+          React.createElement("div", { style: { marginTop: 6, padding: "6px 8px", borderRadius: 8, background: "rgba(168,85,247,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" } },
+            React.createElement("span", { style: { fontSize: 11, color: C.txt2, fontWeight: 600 } }, "Total:"),
+            React.createElement("span", { style: { fontSize: 12, fontWeight: 800, color: C.accent } }, "£" + names.reduce(function(s, n) { return s + (fairShare[n] || 0); }, 0).toFixed(2))
           )
         )
       );
@@ -9780,7 +9806,74 @@ function App() {
     }()
     )),
     // Bookings sub-view
-    bkSubView === "bookings" && React.createElement(React.Fragment, null, React.createElement("div", {
+    bkSubView === "bookings" && React.createElement(React.Fragment, null,
+    // Next show countdown
+    function() {
+      var todayItems = (l[nowStr] || []).slice().sort(function(a, b) {
+        return (timeToMin_(a.rec.start || a.s.startStr) || 0) - (timeToMin_(b.rec.start || b.s.startStr) || 0);
+      });
+      var upcoming = null;
+      for (var ui = 0; ui < todayItems.length; ui++) {
+        var st = timeToMin_(todayItems[ui].rec.start || todayItems[ui].s.startStr);
+        if (st != null && st > nowMin) { upcoming = { item: todayItems[ui], startMin: st, idx: ui }; break; }
+      }
+      if (!upcoming) return null;
+      var minsUntil = upcoming.startMin - nowMin;
+      var hrs = Math.floor(minsUntil / 60);
+      var mins = minsUntil % 60;
+      var timeStr = hrs > 0 ? hrs + "h " + mins + "m" : mins + " min";
+      var walkWarning = null;
+      if (upcoming.idx > 0) {
+        var prev = todayItems[upcoming.idx - 1];
+        var prevEnd = timeToMin_(prev.rec.end || prev.s.endStr);
+        if (prevEnd == null) { var pst = timeToMin_(prev.rec.start || prev.s.startStr); if (pst != null) prevEnd = pst + (prev.s.duration || 60); }
+        if (prevEnd != null && prev.s.venue && upcoming.item.s.venue && venueLabel_(prev.s) !== venueLabel_(upcoming.item.s)) {
+          var wm = walkMin_(prev.s, upcoming.item.s);
+          if (wm != null && wm > 0) {
+            var gapMin = upcoming.startMin - prevEnd;
+            walkWarning = { walkTime: wm, gap: gapMin, tight: gapMin < wm + 5 };
+          }
+        }
+      }
+      var urgencyColor = minsUntil <= 15 ? "#ef4444" : minsUntil <= 30 ? "#f97316" : minsUntil <= 60 ? "#fbbf24" : "#4ade80";
+      var urgencyBg = minsUntil <= 15 ? "rgba(239,68,68,0.12)" : minsUntil <= 30 ? "rgba(249,115,22,0.12)" : minsUntil <= 60 ? "rgba(251,191,36,0.08)" : "rgba(74,222,128,0.08)";
+      return React.createElement("div", {
+        style: { marginBottom: 12, padding: "12px 14px", borderRadius: 12, background: urgencyBg, border: "1px solid " + urgencyColor + "44" }
+      },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } },
+          React.createElement("div", { style: { fontSize: 32, lineHeight: 1 } }, minsUntil <= 15 ? "\ud83d\udea8" : minsUntil <= 30 ? "\u23F0" : "\u231B"),
+          React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+            React.createElement("div", { style: { fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: urgencyColor } }, "Next show in " + timeStr),
+            React.createElement("div", {
+              onClick: function() { de(upcoming.item.s); },
+              style: { fontSize: 14, fontWeight: 800, color: C.txt, cursor: "pointer", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }
+            }, upcoming.item.s.title),
+            React.createElement("div", { style: { fontSize: 11, color: C.txt2, marginTop: 1 } },
+              (upcoming.item.rec.start || upcoming.item.s.startStr) + " \u00b7 " + (upcoming.item.rec.venue || venueLabel_(upcoming.item.s))
+            ),
+            walkWarning && React.createElement("div", { style: { fontSize: 11, marginTop: 3, color: walkWarning.tight ? "#ef4444" : "#fbbf24", fontWeight: 700 } },
+              walkWarning.tight ? "\u26A0\uFE0F " + walkWarning.walkTime + " min walk, only " + walkWarning.gap + " min gap!" : "\ud83d\udeb6 " + walkWarning.walkTime + " min walk \u2014 " + walkWarning.gap + " min gap"
+            ),
+            upcoming.item.s.lat && upcoming.item.s.lng && !isNaN(upcoming.item.s.lat) && !isNaN(upcoming.item.s.lng) && React.createElement("button", {
+              onClick: function() {
+                var destLat = upcoming.item.s.lat, destLng = upcoming.item.s.lng;
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(function(pos) {
+                    window.open("https://www.google.com/maps/dir/?api=1&origin=" + pos.coords.latitude + "," + pos.coords.longitude + "&destination=" + destLat + "," + destLng + "&travelmode=walking", "_blank");
+                  }, function() {
+                    window.open("https://www.google.com/maps/dir/?api=1&destination=" + destLat + "," + destLng + "&travelmode=walking", "_blank");
+                  }, { timeout: 5000 });
+                } else {
+                  window.open("https://www.google.com/maps/dir/?api=1&destination=" + destLat + "," + destLng + "&travelmode=walking", "_blank");
+                }
+              },
+              style: { marginTop: 6, padding: "5px 12px", borderRadius: 8, border: "1px solid " + urgencyColor + "66", background: urgencyBg, color: urgencyColor, fontSize: 11, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }
+            }, "\ud83e\udded Take me there")
+          )
+        )
+      );
+    }(),
+    React.createElement("div", {
       style: {
         display: "flex",
         gap: 8,
@@ -9968,7 +10061,7 @@ function App() {
       onChange: function(ev) { setBkDateFilter(ev.target.value); },
       title: "Filter to a specific date",
       "aria-label": "Filter bookings by date",
-      style: {padding: "7px 10px", borderRadius: 8, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 13, colorScheme: THEME === "light" ? "light" : "dark", cursor: "pointer"}
+      style: {padding: "7px 10px", borderRadius: 8, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 13, colorScheme: (THEME === "light" || THEME === "lightbw") ? "light" : "dark", cursor: "pointer"}
     }),
     !V && bkDateFilter && React.createElement("button", {
       onClick: function() { setBkDateFilter(""); },
@@ -10012,11 +10105,6 @@ function App() {
       title: companionView ? "Hide companion schedule" : "Show companion schedule",
       style: { padding: "7px 14px", borderRadius: 8, border: "1px solid " + (companionView ? C.accent : C.border), background: companionView ? "rgba(168,85,247,0.15)" : "transparent", color: companionView ? C.accent : C.txt2, fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1.3 }
     }, V ? "\ud83d\udc65" : "\ud83d\udc65 Companions")),
-    React.createElement("button", {
-      onClick: function() { mt("browse"); window.scrollTo(0, 0); },
-      title: "Discover shows for you",
-      style: { padding: "7px 14px", borderRadius: 8, border: "1px solid #f59e0b", background: "rgba(245,158,11,0.15)", color: "#f59e0b", fontSize: 12, fontWeight: 800, cursor: "pointer", lineHeight: 1.3 }
-    }, V ? "\u2728" : "\u2728 Discover"),
     V && React.createElement("div", {
       style: { display: "flex", gap: 8, alignItems: "center" }
     }, React.createElement("input", {
@@ -10025,7 +10113,7 @@ function App() {
       onChange: function(ev) { setBkDateFilter(ev.target.value); },
       title: "Filter to a specific date",
       "aria-label": "Filter bookings by date",
-      style: {padding: "7px 10px", borderRadius: 8, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 13, colorScheme: THEME === "light" ? "light" : "dark", cursor: "pointer", flex: 1}
+      style: {padding: "7px 10px", borderRadius: 8, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 13, colorScheme: (THEME === "light" || THEME === "lightbw") ? "light" : "dark", cursor: "pointer", flex: 1}
     }),
     bkDateFilter && React.createElement("button", {
       onClick: function() { setBkDateFilter(""); },
@@ -10463,7 +10551,9 @@ function App() {
           c = c.filter(function(m) {
             var endM = timeToMin_(m.rec.end || m.s.endStr);
             if (endM == null) return true;
-            return (endM + 1) > nowMin;
+            if (endM < 300) endM += 1440;
+            var _nm = nowMin < 300 ? nowMin + 1440 : nowMin;
+            return (endM + 1) > _nm;
           });
         }
         var unused_ = 0,
@@ -10714,13 +10804,6 @@ function App() {
             ), function() {
               var btnS = {width: 32, height: 32, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 13, cursor: "pointer", padding: 0};
               var allBtns = [
-                React.createElement("button", {
-                  key: "edit-bk",
-                  onClick: function() { Be(m.s); },
-                  "aria-label": "Edit booking",
-                  title: "Edit booking date/time",
-                  style: Object.assign({}, btnS, {border: "1px solid #f472b6", background: "rgba(244,114,182,0.18)", color: "#f472b6"})
-                }, "\u{1F3AB}"),
                 React.createElement("div", {
                   key: "rate",
                   style: {position: "relative", display: "inline-flex", alignItems: "center"}
@@ -10766,20 +10849,13 @@ function App() {
                   title: "View on edfringe.com",
                   style: Object.assign({}, btnS, {textDecoration: "none", border: "1px solid " + C.border, color: C.txt2})
                 }, React.createElement("svg", {width:15,height:15,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round"}, React.createElement("circle", {cx:12,cy:12,r:10}), React.createElement("path", {d:"M2 12h20"}), React.createElement("path", {d:"M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"}))) : null,
-                React.createElement("button", {
-                  key: "review",
-                  onClick: function() { de(m.s); },
-                  "aria-label": (se[m.code] ? "Edit" : "Add") + " review or notes",
-                  title: se[m.code] ? "Edit review / notes" : "Add review / notes",
-                  style: Object.assign({}, btnS, {border: "1px solid " + (se[m.code] ? "#fbbf24" : C.border), background: se[m.code] ? "rgba(251,191,36,0.15)" : "transparent", color: se[m.code] ? "#fbbf24" : C.txt2, fontSize: 14})
-                }, "\u270f\ufe0f"),
                 V && X.length > 0 && React.createElement("select", {
                   key: "prop",
                   value: "",
                   onChange: function(z) { z.target.value && wt(z.target.value, m.code); },
                   "aria-label": "Add to a proposal",
                   title: "Add to a proposal",
-                  style: Object.assign({}, btnS, {textAlign: "center", textAlignLast: "center", fontSize: 14, colorScheme: THEME === "light" ? "light" : "dark", appearance: "none", WebkitAppearance: "none", MozAppearance: "none"})
+                  style: Object.assign({}, btnS, {textAlign: "center", textAlignLast: "center", fontSize: 14, colorScheme: (THEME === "light" || THEME === "lightbw") ? "light" : "dark", appearance: "none", WebkitAppearance: "none", MozAppearance: "none"})
                 }, React.createElement("option", {value: ""}, "\u{1F4CB}"), X.map(function(z) { return React.createElement("option", {key: z.id, value: z.id}, z.title || "Untitled"); }), React.createElement("option", {value: "__new"}, "\uFF0B New")),
                 React.createElement("button", {
                   key: "del",
@@ -10808,10 +10884,9 @@ function App() {
             }, function() {
               var btnS = {width: 32, height: 32, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 6, border: "1px solid " + C.border, background: "transparent", color: C.txt2, fontSize: 13, cursor: "pointer", padding: 0};
               return [
-                React.createElement("button", { key: "edit-bk", onClick: function() { Be(m.s); }, "aria-label": "Edit booking", title: "Edit booking date/time", style: Object.assign({}, btnS, {border: "1px solid #f472b6", background: "rgba(244,114,182,0.18)", color: "#f472b6"}) }, "\u{1F3AB}"),
                 React.createElement("div", { key: "rate", style: {position: "relative", display: "inline-flex", alignItems: "center"} }, React.createElement("button", { onClick: function(ev) { ev.stopPropagation(); setRatingPopup(ratingPopup === m.code ? null : m.code); }, "aria-label": ratings[m.code] ? ratings[m.code] + "/5" : "Rate", title: ratings[m.code] ? ratings[m.code] + "/5 \u2014 tap to change" : "Rate this show", style: Object.assign({}, btnS, {fontSize: 15, color: ratings[m.code] ? "#FBBF24" : C.txt3, background: ratingPopup === m.code ? "rgba(251,191,36,0.15)" : "transparent", border: "1px solid " + (ratings[m.code] ? "rgba(251,191,36,0.4)" : C.border)}) }, ratings[m.code] ? "\u2605" : "\u2606", ratings[m.code] ? React.createElement("span", {style: {fontSize: 9, marginLeft: 1, fontWeight: 800}}, ratings[m.code]) : null), ratingPopup === m.code && React.createElement("div", { style: {position: "absolute", bottom: "100%", left: "50%", transform: "translateX(-50%)", marginBottom: 4, background: C.card, border: "1px solid " + C.border, borderRadius: 10, padding: "4px 6px", display: "flex", gap: 1, zIndex: 100, boxShadow: "0 4px 16px rgba(0,0,0,0.4)"} }, [1,2,3,4,5].map(function(star) { return React.createElement("button", { key: star, onClick: function(ev) { ev.stopPropagation(); setRatings(function(prev) { var next = Object.assign({}, prev); if (ratings[m.code] === star) delete next[m.code]; else next[m.code] = star; return next; }); setRatingPopup(null); }, style: {width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: 4, border: "none", background: "transparent", cursor: "pointer", fontSize: 16, color: star <= (ratings[m.code] || 0) ? "#FBBF24" : C.txt3, padding: 0} }, star <= (ratings[m.code] || 0) ? "\u2605" : "\u2606"); }))),
                 React.createElement("button", { key: "wish", onClick: function() { Se(m.code); }, "aria-label": d.has(m.code) ? "Remove from wishlist" : "Add to wishlist", title: d.has(m.code) ? "On your wishlist" : "Add to wishlist", style: Object.assign({}, btnS, {border: "1px solid " + (d.has(m.code) ? "#34d399" : C.border), background: d.has(m.code) ? "rgba(52,211,153,0.16)" : "transparent", color: d.has(m.code) ? "#34d399" : C.txt2}) }, d.has(m.code) ? "🪄" : "🪄"),
-                V && X.length > 0 && React.createElement("select", { key: "prop", value: "", onChange: function(z) { z.target.value && wt(z.target.value, m.code); }, "aria-label": "Add to a proposal", title: "Add to a proposal", style: Object.assign({}, btnS, {textAlign: "center", textAlignLast: "center", fontSize: 14, colorScheme: THEME === "light" ? "light" : "dark", appearance: "none", WebkitAppearance: "none", MozAppearance: "none"}) }, React.createElement("option", {value: ""}, "\u{1F4CB}"), X.map(function(z) { return React.createElement("option", {key: z.id, value: z.id}, z.title || "Untitled"); }), React.createElement("option", {value: "__new"}, "\uFF0B New")),
+                V && X.length > 0 && React.createElement("select", { key: "prop", value: "", onChange: function(z) { z.target.value && wt(z.target.value, m.code); }, "aria-label": "Add to a proposal", title: "Add to a proposal", style: Object.assign({}, btnS, {textAlign: "center", textAlignLast: "center", fontSize: 14, colorScheme: (THEME === "light" || THEME === "lightbw") ? "light" : "dark", appearance: "none", WebkitAppearance: "none", MozAppearance: "none"}) }, React.createElement("option", {value: ""}, "\u{1F4CB}"), X.map(function(z) { return React.createElement("option", {key: z.id, value: z.id}, z.title || "Untitled"); }), React.createElement("option", {value: "__new"}, "\uFF0B New")),
                 m.s.website ? React.createElement("a", { key: "web", href: m.s.website, target: "_blank", rel: "noopener noreferrer", title: "View on edfringe.com", style: Object.assign({}, btnS, {textDecoration: "none", border: "1px solid " + C.border, color: C.txt2}) }, React.createElement("svg", {width:15,height:15,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round"}, React.createElement("circle", {cx:12,cy:12,r:10}), React.createElement("path", {d:"M2 12h20"}), React.createElement("path", {d:"M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"}))) : null,
                 m.rec.date ? React.createElement("button", { key: "ics", onClick: function() { downloadICS_(m.s, m.rec); }, "aria-label": "Add to Apple Calendar", title: "Apple Calendar (.ics)", style: Object.assign({}, btnS, {border: "1px solid #FF3B30", background: "rgba(255,59,48,0.12)", color: "#FF3B30"}) }, React.createElement("svg", {width:16,height:16,viewBox:"0 0 24 24",fill:"none",xmlns:"http://www.w3.org/2000/svg"}, React.createElement("rect", {x:2,y:4,width:20,height:18,rx:3,fill:"#FF3B30"}), React.createElement("rect", {x:4,y:10,width:16,height:10,rx:1,fill:"white"}), React.createElement("rect", {x:7,y:1,width:2,height:5,rx:1,fill:C.txt2}), React.createElement("rect", {x:15,y:1,width:2,height:5,rx:1,fill:C.txt2}), React.createElement("text", {x:12,y:18,textAnchor:"middle",fontSize:8,fontWeight:900,fill:"#FF3B30"}, "A"))) : null,
                 m.rec.date ? React.createElement("a", { key: "gcal", href: gcalUrl_(m.s, m.rec), target: "_blank", rel: "noopener noreferrer", "aria-label": "Add to Google Calendar", title: "Google Calendar", style: Object.assign({}, btnS, {textDecoration: "none", border: "1px solid #4285F4", background: "rgba(66,133,244,0.12)", color: "#4285F4"}) }, React.createElement("svg", {width:16,height:16,viewBox:"0 0 24 24",fill:"none",xmlns:"http://www.w3.org/2000/svg"}, React.createElement("rect", {x:2,y:4,width:20,height:18,rx:3,fill:"#4285F4"}), React.createElement("rect", {x:4,y:10,width:16,height:10,rx:1,fill:"white"}), React.createElement("rect", {x:7,y:1,width:2,height:5,rx:1,fill:C.txt2}), React.createElement("rect", {x:15,y:1,width:2,height:5,rx:1,fill:C.txt2}), React.createElement("text", {x:12,y:18,textAnchor:"middle",fontSize:8,fontWeight:900,fill:"#4285F4"}, "G"))) : null,
@@ -11041,7 +11116,7 @@ function App() {
         background: "rgba(255,255,255,0.06)",
         color: C.txt,
         fontSize: 14,
-        colorScheme: THEME === "light" ? "light" : "dark"
+        colorScheme: (THEME === "light" || THEME === "lightbw") ? "light" : "dark"
       }
     }), React.createElement("span", {
       style: {
@@ -11686,7 +11761,7 @@ function App() {
         background: "rgba(255,255,255,0.06)",
         color: C.txt,
         fontSize: 12,
-        colorScheme: THEME === "light" ? "light" : "dark",
+        colorScheme: (THEME === "light" || THEME === "lightbw") ? "light" : "dark",
         cursor: "pointer"
       }
     }), React.createElement("button", {onClick: () => ut(Y.id === e.id ? {id: null, q: ""} : {id: e.id, q: ""}), title: "Add a show", style: {padding: "6px 10px", borderRadius: 10, border: "1px dashed " + C.border, background: Y.id === e.id ? "rgba(168,85,247,0.12)" : "transparent", color: Y.id === e.id ? "#c084fc" : C.txt2, fontSize: 12, fontWeight: 800, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap"}}, Y.id === e.id ? "Done" : "+ Add show"), React.createElement("div", {style: {flex: V ? 0 : 1}}), React.createElement("button", {
@@ -12115,7 +12190,10 @@ function App() {
     setSortDir: at,
     tagFilter: tagFilter,
     setTagFilter: setTagFilter,
-    allUserTags: allUserTags
+    allUserTags: allUserTags,
+    section: Q,
+    orgFilter: orgFilter,
+    setOrgFilter: setOrgFilter
   }), React.createElement("button", {
     onClick: () => Ie(!1),
     style: {
@@ -12223,27 +12301,36 @@ function App() {
       nextYearList.length === 0 ? React.createElement("div", {style: {textAlign: "center", color: C.txt3, fontSize: 14, padding: "36px 12px"}}, "No artists added yet. Search above to start building your list for next year!") :
       React.createElement("div", {style: {display: "flex", flexDirection: "column", gap: 6}},
         nextYearList.map(function(item, idx) {
+          var noteExpanded = nyNoteOpen === (item.code || idx);
           return React.createElement("div", {
             key: item.code || idx,
             style: {padding: "10px 14px", borderRadius: 12, border: "1px solid " + C.border, background: C.card}
           },
-            React.createElement("div", {style: {display: "flex", alignItems: "center", gap: 10}},
+            React.createElement("div", {style: {display: "flex", alignItems: "center", gap: 8}},
               React.createElement("div", {style: {flex: 1, minWidth: 0}},
-                React.createElement("div", {style: {fontSize: 14, fontWeight: 800}}, item.artist),
-                React.createElement("div", {style: {fontSize: 12, color: C.txt2}}, SITE_YEAR + " show: ", React.createElement("span", {style: {fontStyle: "italic"}}, item.showTitle))
+                React.createElement("div", {style: {fontSize: 14, fontWeight: 800}}, item.showTitle || item.artist),
+                item.artist && item.artist !== item.showTitle && React.createElement("div", {style: {fontSize: 12, color: C.txt2, marginTop: 1}}, "by " + item.artist),
+                React.createElement("div", {style: {fontSize: 11, color: C.txt3, marginTop: 1, fontStyle: "italic"}}, SITE_YEAR + " show")
               ),
+              React.createElement("button", {
+                onClick: function() { setNyNoteOpen(noteExpanded ? null : (item.code || idx)); },
+                "aria-label": (item.note ? "Edit" : "Add") + " note",
+                title: (item.note ? "Edit" : "Add") + " note",
+                style: {width: 30, height: 30, borderRadius: 8, border: "1px solid " + (item.note ? C.accent + "66" : C.border), background: item.note ? C.accent + "18" : "transparent", color: item.note ? C.accent : C.txt3, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0}
+              }, "📝"),
               React.createElement("button", {
                 onClick: function() { removeItem(item.code); },
                 "aria-label": "Remove " + item.artist,
                 style: {width: 30, height: 30, borderRadius: 8, border: "1px solid " + C.border, background: "transparent", color: C.txt3, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0}
               }, "✕")
             ),
-            React.createElement("textarea", {
+            noteExpanded && React.createElement("textarea", {
               placeholder: "Add a note…",
               value: item.note || "",
               onChange: function(e) { updateNote(item.code, e.target.value); },
-              rows: 1,
-              style: {width: "100%", boxSizing: "border-box", marginTop: 8, padding: "6px 10px", borderRadius: 8, border: "1px solid " + C.border, background: "rgba(255,255,255,0.04)", color: C.txt2, fontSize: 12, fontFamily: "inherit", resize: "vertical", outline: "none", minHeight: 28}
+              rows: 3,
+              autoFocus: true,
+              style: {width: "100%", boxSizing: "border-box", marginTop: 8, padding: "8px 10px", borderRadius: 8, border: "1px solid " + C.accent + "44", background: "rgba(255,255,255,0.04)", color: C.txt, fontSize: 12, fontFamily: "inherit", resize: "vertical", outline: "none", minHeight: 60}
             })
           );
         })
@@ -12361,8 +12448,8 @@ function App() {
       overflowX: "hidden",
       overflowY: "hidden"
     }
-  }, pe("booked", "Booked", "\u{1F3AB}"), pe("browse", "Browse", "\u{1F3AD}"), pe("calendar", "Cal", "\u{1F4C5}"), pe("map", "Map", "\u{1F5FA}\uFE0F"), pe("nextyear", "Next Yr", "\u{1F52E}"), pe("proposals", "Pitch", "\u{1F4CB}"), pe("planner", "Planner", "\u{1F9ED}"), pe("reviews", "Reviews", "\u2B50"), pe("stats", "Stats", "\u{1F4CA}"), pe("plan", "Wishlist", "\u{1FA84}"), Q === "browse" && null), ["browse", "plan", "booked", "map"].includes(Q) && !un && React.createElement("button", {onClick: () => Ie(!0), "aria-label": "Filters", title: "Filters", style: {position: "fixed", right: 16, bottom: V ? "calc(92px + env(safe-area-inset-bottom))" : 26, zIndex: 500, width: 52, height: 52, borderRadius: 26, border: "none", cursor: "pointer", background: "linear-gradient(135deg,var(--pink),var(--accent))", color: "#fff", boxShadow: "0 6px 20px rgba(168,85,247,0.5)", display: "flex", alignItems: "center", justifyContent: "center"}}, React.createElement("svg", {width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "#fff", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round"}, React.createElement("path", {d: "M3 4h18l-7 8v6l-4 2v-8z"})), me && React.createElement("span", {style: {position: "absolute", top: 9, right: 9, width: 9, height: 9, borderRadius: 5, background: "#fff", border: "1px solid var(--accent)"}}))
-  ), document.getElementById("nav-portal")), !V && ["browse", "plan", "booked", "map"].includes(Q) && !un && ReactDOM.createPortal(React.createElement("button", {onClick: () => Ie(!0), "aria-label": "Filters", title: "Filters", style: {position: "fixed", right: 16, bottom: 26, zIndex: 500, width: 52, height: 52, borderRadius: 26, border: "none", cursor: "pointer", background: "linear-gradient(135deg,var(--pink),var(--accent))", color: "#fff", boxShadow: "0 6px 20px rgba(168,85,247,0.5)", display: "flex", alignItems: "center", justifyContent: "center"}}, React.createElement("svg", {width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "#fff", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round"}, React.createElement("path", {d: "M3 4h18l-7 8v6l-4 2v-8z"})), me && React.createElement("span", {style: {position: "absolute", top: 9, right: 9, width: 9, height: 9, borderRadius: 5, background: "#fff", border: "1px solid var(--accent)"}})), document.getElementById("nav-portal")), toastMsg && React.createElement("div", {
+  }, pe("booked", "Booked", "\u{1F3AB}"), pe("browse", "Browse", "\u{1F3AD}"), pe("calendar", "Cal", "\u{1F4C5}"), pe("map", "Map", "\u{1F5FA}\uFE0F"), pe("nextyear", "Next Yr", "\u{1F52E}"), pe("proposals", "Pitch", "\u{1F4CB}"), pe("planner", "Planner", "\u{1F9ED}"), pe("reviews", "Reviews", "\u2B50"), pe("stats", "Stats", "\u{1F4CA}"), pe("plan", "Wishlist", "\u{1FA84}"), Q === "browse" && null), ["browse", "plan", "booked", "map", "reviews"].includes(Q) && !un && React.createElement("button", {onClick: () => Ie(!0), "aria-label": "Filters", title: "Filters", style: {position: "fixed", right: 16, bottom: V ? "calc(92px + env(safe-area-inset-bottom))" : 26, zIndex: 500, width: 52, height: 52, borderRadius: 26, border: "none", cursor: "pointer", background: "linear-gradient(135deg,var(--pink),var(--accent))", color: "#fff", boxShadow: "0 6px 20px rgba(168,85,247,0.5)", display: "flex", alignItems: "center", justifyContent: "center"}}, React.createElement("svg", {width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "#fff", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round"}, React.createElement("path", {d: "M3 4h18l-7 8v6l-4 2v-8z"})), me && React.createElement("span", {style: {position: "absolute", top: 9, right: 9, width: 9, height: 9, borderRadius: 5, background: "#fff", border: "1px solid var(--accent)"}}))
+  ), document.getElementById("nav-portal")), !V && ["browse", "plan", "booked", "map", "reviews"].includes(Q) && !un && ReactDOM.createPortal(React.createElement("button", {onClick: () => Ie(!0), "aria-label": "Filters", title: "Filters", style: {position: "fixed", right: 16, bottom: 26, zIndex: 500, width: 52, height: 52, borderRadius: 26, border: "none", cursor: "pointer", background: "linear-gradient(135deg,var(--pink),var(--accent))", color: "#fff", boxShadow: "0 6px 20px rgba(168,85,247,0.5)", display: "flex", alignItems: "center", justifyContent: "center"}}, React.createElement("svg", {width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "#fff", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round"}, React.createElement("path", {d: "M3 4h18l-7 8v6l-4 2v-8z"})), me && React.createElement("span", {style: {position: "absolute", top: 9, right: 9, width: 9, height: 9, borderRadius: 5, background: "#fff", border: "1px solid var(--accent)"}})), document.getElementById("nav-portal")), toastMsg && React.createElement("div", {
     style: { position: "fixed", bottom: V ? "calc(70px + env(safe-area-inset-bottom))" : 30, left: "50%", transform: "translateX(-50%)", zIndex: 10000, background: "linear-gradient(135deg, var(--pink), var(--accent))", color: "#fff", padding: "10px 22px", borderRadius: 12, fontSize: 14, fontWeight: 700, boxShadow: "0 6px 24px rgba(168,85,247,0.4)", pointerEvents: "none", animation: "fadeInUp 0.3s ease" }
   }, toastMsg), React.createElement("footer", {
     style: {
